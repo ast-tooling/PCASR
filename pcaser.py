@@ -463,6 +463,7 @@ class PCaser:
     def initMainFrame(self):
         self.mainwindow = tk.Tk()
         self.mainwindow.title("PCASR")
+        self.mainwindow.resizable(False, False)
         self.toplevel = self.mainwindow.winfo_toplevel()
         self.main_frame = ttk.Labelframe(self.mainwindow)
 
