@@ -408,6 +408,36 @@ class saveDialogWindow:
         self.the_parent.toplevel.wm_attributes("-disabled",False)
         self.save_window.destroy()
 
+class aboutWindow:
+
+    def __init__(self,parent):
+
+        # save parent for further use
+        self.the_parent = parent
+
+        self.about_window = tk.Tk()
+        self.about_window.title("About")
+
+        # Tell the window manager to give focus back after the X button is hit
+        self.about_window.protocol("WM_DELETE_WINDOW", self.kill_window)
+
+        # Set this window to appear on top of other windows
+        self.about_window.attributes("-topmost",True)
+
+        self.version_label = ttk.Label(self.about_window,text="v0.1.1.0")
+        self.copyright_label = ttk.Label(self.about_window,text="Copyright © 2020 - 2021 Factor Systems Inc. Dba BillTrust")
+        self.author_label = ttk.Label(self.about_window,text="Written By Matthew DeGenaro")
+
+        self.version_label.pack()
+        self.copyright_label.pack()
+        self.author_label.pack()
+
+    def kill_window(self):
+        self.the_parent.toplevel.wm_attributes("-disabled",False)
+        self.about_window.destroy()
+
+
+
 class PCaser:
 
     webbrowser.register('chrome',None,webbrowser.BackgroundBrowser("C://Program Files (x86)//Google//Chrome//Application//chrome.exe"))
@@ -684,16 +714,16 @@ class PCaser:
         self.menu_item_2.add_command(label="Preferences")
 
         # Add 3- Tools Menu Subitems
-        self.menu_item_3.add_command(label="Open Parsamajig")
-        self.menu_item_3.add_command(label="Open XMLGenerator")
-        self.menu_item_3.add_command(label="Open BillGen Wrapper")
+        self.menu_item_3.add_command(label="Open Parseamajig",command=lambda: self.openApplication("Z:\\AST\\Utilities\\Parseamajig\\Parseamajig.exe"))
+        self.menu_item_3.add_command(label="Open XMLGenerator",command=lambda: self.openApplication("Z:\\AST\\Utilities\\XMLGenerator\\XmlGenerator.exe"))
+        self.menu_item_3.add_command(label="Open BillGen Wrapper",command=lambda: self.openApplication("Z:\\AST\\Utilities\\BillGen\\BillGenWrapper.exe"))
         self.menu_item_3.add_separator()
-        self.menu_item_3.add_command(label="Run PDF Version Checker")
+        self.menu_item_3.add_command(label="Run PDF Version Checker",state=DISABLED)
 
 
         # Add 4- Help Menu Subitems
-        self.menu_item_4.add_command(label="About")
-        self.menu_item_4.add_command(label="Confluence Page")
+        self.menu_item_4.add_command(label="About", command=lambda:aboutWindow(self))
+        self.menu_item_4.add_command(label="Confluence Page",command=lambda: self.openWebsite("https://billtrust.atlassian.net/wiki/spaces/AT/overview"))
         
         # Add Menu Options to Bar
         self.menu_bar.add_cascade(label="File", menu=self.menu_item_1)
@@ -947,8 +977,15 @@ class PCaser:
         else:
             messagebox.showwarning('Error', 'URL appears to be invalid.\nPlease enter a valid URL.')
 
-    
-    
+    def openApplication(self,path):
+        try:
+            messagebox.showinfo('Just a Second...', 'This can  a minute to open, please be patient.')
+            os.startfile(path)
+        except:
+            messagebox.showwarning('Error', 'You must be connected to the VPN to open this.')
+
+    def openWebsite(self,page):
+        webbrowser.get('chrome').open(page)
         
 
 if __name__ == '__main__':
