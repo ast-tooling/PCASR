@@ -670,12 +670,13 @@ class PCaser:
 
         self.toplevel.bind_all("<Control-s>",self.saveNoteWrapper)
         self.toplevel.bind_all("<Control-n>",self.newWindowWrapper)
+        self.toplevel.bind_all("<Control-q>",self.killWindowWrapper)
 
         # Add 1 - File Menu Subitems
         self.menu_item_1.add_command(label="New",accelerator="Ctrl+N",command=self.newWindow)
         self.menu_item_1.add_command(label="Save",accelerator="Ctrl+S",command=self.saveNotes)
         self.menu_item_1.add_separator()
-        self.menu_item_1.add_command(label="Quit",accelerator="Ctrl+Q")
+        self.menu_item_1.add_command(label="Quit",accelerator="Ctrl+Q",command=self.kill_window)
 
         # Add 2- Edit Menu Subitems
         self.menu_item_2.add_command(label="Change PCase Details",command=self.editWindow)
@@ -727,7 +728,10 @@ class PCaser:
         self.saveNotes()
 
     def newWindowWrapper(self,parent):
-        self.newWindow(False)
+        self.newWindow()
+
+    def killWindowWrapper(self,parent):
+        self.kill_window()
 
     def saveNotes(self):
         user = os.getlogin()
@@ -803,7 +807,6 @@ class PCaser:
 
     def editWindow(self):
         saveDialogWindow(self,True)
-
 
     def run(self):
         self.mainwindow.mainloop()
