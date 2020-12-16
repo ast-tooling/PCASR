@@ -436,8 +436,6 @@ class aboutWindow:
         self.the_parent.toplevel.wm_attributes("-disabled",False)
         self.about_window.destroy()
 
-
-
 class PCaser:
 
     webbrowser.register('chrome',None,webbrowser.BackgroundBrowser("C://Program Files (x86)//Google//Chrome//Application//chrome.exe"))
@@ -677,8 +675,9 @@ class PCaser:
         self.vers_info = ttk.Label(self.info_frame,text="45")
         self.rev_info = ttk.Label(self.info_frame,text="10/21/96")
 
-        self.pcase_button = ttk.Button(self.info_frame,text="PCASE",command=self.openDir)
+        self.pcase_button = ttk.Button(self.info_frame,text="PCASE",command=lambda: self.openDir("Z:\\IT Documents\\QA\\" + self.pcase_info.cget('text')))
         self.srd_button = ttk.Button(self.info_frame,text="SRD",command=self.openSRD)
+        self.ftp_root_button = ttk.Button(self.info_frame,text="FTP Root",command=lambda: self.openDir("\\\\ssnj-netapp01\\imtest\\imstage01\\ftproot\\"+self.cust_info.cget('text') ))
 
         # Define Grid for Info Section Items
         self.pcase_info.grid(row=1,column=0,padx=15)
@@ -689,6 +688,7 @@ class PCaser:
         self.rev_info.grid(row=1,column=2,)
         self.pcase_button.grid(row=0,column=3,sticky="E",padx=5)
         self.srd_button.grid(row=1,column=3,sticky="E",padx=5)
+        self.ftp_root_button.grid(row=2,column=3,sticky="E",padx=5)
 
     def initMenuBar(self):
         # Initialize Menu Bar and Menu Items
@@ -961,15 +961,11 @@ class PCaser:
     def pushRelease(self):
         self.pushFiles("\\VC\\Release\\Bin",)
 
-    def openDir(self):
-        pcase = self.pcase_info.cget('text')
-        if pcase:
-            pcaseDir = "Z:\\IT Documents\\QA\\" + pcase
-            expString = "explorer " + pcaseDir
-            print(expString)
-            subprocess.Popen(expString)        
-        else:
-            messagebox.showwarning('Error', 'The PCase must first be validated with the checkmark button')
+    def openDir(self,path):
+        expString = "explorer " + path
+        print(expString)
+        subprocess.Popen(expString)     
+
     def openSRD(self):
         srd = self.srd_info
         if srd:
