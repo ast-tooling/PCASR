@@ -115,6 +115,7 @@ class copyFilesWindow:
 
         self.copy_window = tk.Tk()
         self.copy_window.title("Copying Files")
+        self.copy_window.geometry('+%d+%d'%(parent.toplevel.winfo_x(),parent.toplevel.winfo_y()))
 
         # Tell the window manager to give focus back after the X button is hit
         self.copy_window.protocol("WM_DELETE_WINDOW", self.kill_window)
@@ -204,6 +205,7 @@ class filePickerWindow:
         self.toplevel =parent.toplevel
         self.infiles = files
         self.files = []
+        self.picker_window.geometry('+%d+%d'%(parent.toplevel.winfo_x(),parent.toplevel.winfo_y()))
 
         # Set this window to appear on top of all other windows
         self.picker_window.attributes("-topmost",True)
@@ -255,6 +257,9 @@ class saveDialogWindow:
         self.save_window = tk.Tk()
         self.save_window.title("PCase Details")
         self.save_frame = Frame(self.save_window,borderwidth=1)
+
+        # Control Location of Appearence
+        self.save_window.geometry('+%d+%d'%(parent.toplevel.winfo_x(),parent.toplevel.winfo_y()))
 
         # Tell the window manager to give focus back after the X button is hit
         self.save_window.protocol("WM_DELETE_WINDOW", self.kill_window)
@@ -417,6 +422,7 @@ class aboutWindow:
 
         self.about_window = tk.Tk()
         self.about_window.title("About")
+        self.about_window.geometry('+%d+%d'%(parent.toplevel.winfo_x(),parent.toplevel.winfo_y()))
 
         # Tell the window manager to give focus back after the X button is hit
         self.about_window.protocol("WM_DELETE_WINDOW", self.kill_window)
