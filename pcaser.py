@@ -461,8 +461,9 @@ class PCaser:
         self.initMenuBar()
         self.initInfoFrame()
         self.initFTPFrame()
-        self.initListBox()
         self.initTabArea()
+
+        self.initTreeView()
 
 
 
@@ -472,10 +473,10 @@ class PCaser:
 
         self.watching = False
         # Select the first listbox item if there is one
-        topSelect = self.pcase_list.get(0)
+        topSelect = self.pcase_list.item('I001')
         if topSelect:
-            self.pcase_list.selection_set(0)
-            self.updateInfo(topSelect)
+            self.pcase_list.selection_set('I001')
+            self.updateInfo(topSelect['values'])
 
             self.threadStart()
 
@@ -502,7 +503,8 @@ class PCaser:
         self.main_frame = ttk.Labelframe(self.mainwindow)
 
         self.pcase_frame = ttk.Labelframe(self.main_frame,text="PCase")
-        self.pcase_list_frame = ttk.Labelframe(self.main_frame,text="PCase List")
+
+        self.pcase_list_frame2 = ttk.Labelframe(self.main_frame,text="PCase List")
 
         self.info_area_frame = ttk.Labelframe(self.pcase_frame,text="Info")
         self.ftp_root_frame = ttk.Labelframe(self.pcase_frame,text="FTP Root")
@@ -518,7 +520,8 @@ class PCaser:
 
 
         self.pcase_frame.grid(row=0,column=1)
-        self.pcase_list_frame.grid(row=0,column=0,padx=10)
+
+        self.pcase_list_frame2.grid(row=0,column=0,padx=10)
 
         self.main_frame.grid(row=0,column=0,padx=5)
 
@@ -661,12 +664,38 @@ class PCaser:
     def pushEverything(self):
         pass
 
-    def initListBox(self):
-        # Define the ListBox to Hold PCases
-        self.pcase_list = Listbox(self.pcase_list_frame,height=40,width=40,exportselection=0)
-        self.pcase_list.bind('<<ListboxSelect>>',self.onselect)
-        self.lastSelected = 0
+    def initTreeView(self):
+        # Define new treeview to hold PCases
+        columns=["PCase","CSR Name","Date Created"]
+        self.pcase_list = ttk.Treeview(self.pcase_list_frame2,height=30,columns=columns,show="headings")
+        self.pcase_list.bind('<<TreeviewSelect>>',self.onselect)
+
+        self.pcase_list.column('PCase',width=65,stretch=False,minwidth=65)
+        self.pcase_list.column('CSR Name',width=150,stretch=False,minwidth=100)
+        self.pcase_list.column('Date Created',width=80,stretch=False,minwidth=80)
+
+        self.pcase_list.heading('PCase',text="PCase")
+        self.pcase_list.heading('CSR Name',text="CSR Name")
+        self.pcase_list.heading('Date Created',text="Date Created")
+
+        for col in columns:
+            self.pcase_list.heading(col,command=lambda _col=col: self.treeview_sort_column(_col, False))
+
+        self.pcase_list.tag_configure('True',background='lightgray')
+
         self.pcase_list.pack()
+
+    def treeview_sort_column(self,col, reverse):
+        l = [(self.pcase_list.set(k, col), k) for k in self.pcase_list.get_children('')]
+        l.sort(reverse=reverse)
+
+        # rearrange items in sorted positions
+        for index, (val, k) in enumerate(l):
+            self.pcase_list.move(k, '', index)
+
+        # reverse sort next time
+        self.pcase_list.heading(col, command=lambda _col=col: self.treeview_sort_column(_col, not reverse))
+
 
     def initInfoFrame(self):
         # Initialize Info Section contents
@@ -705,13 +734,11 @@ class PCaser:
         self.menu_item_3 = Menu(self.menu_bar,tearoff=False)
         self.menu_item_4 = Menu(self.menu_bar,tearoff=False)
 
-        self.toplevel.bind_all("<Control-s>",self.saveNoteWrapper)
         self.toplevel.bind_all("<Control-n>",self.newWindowWrapper)
         self.toplevel.bind_all("<Control-q>",self.killWindowWrapper)
 
         # Add 1 - File Menu Subitems
         self.menu_item_1.add_command(label="New",accelerator="Ctrl+N",command=self.newWindow)
-        self.menu_item_1.add_command(label="Save",accelerator="Ctrl+S",command=self.saveNotes)
         self.menu_item_1.add_separator()
         self.menu_item_1.add_command(label="Quit",accelerator="Ctrl+Q",command=self.kill_window)
 
@@ -761,9 +788,6 @@ class PCaser:
                 self.ftpList.insert(tk.END,item)
 
 
-    def saveNoteWrapper(self,parent):
-        self.saveNotes()
-
     def newWindowWrapper(self,parent):
         self.newWindow()
 
@@ -789,24 +813,18 @@ class PCaser:
             self.notehash = hash(notes)
 
     def onselect(self,parent):
-        print(hash(self.notes.get("1.0","end")))
-        if self.notehash == hash(self.notes.get("1.0","end")):
-            self.setWatch(False)
-            listbox = self.pcase_list
-            index = int(listbox.curselection()[0])
-            value = listbox.get(index)
-            self.notes.delete(1.0, END)
-            self.updateInfo(value)
-            self.lastSelected = index
-        else:
-            messagebox.showwarning('Error', 'Changes to Notes not saved')
-            self.pcase_list.selection_clear(int(self.pcase_list.curselection()[0]))
-            self.pcase_list.selection_set(self.lastSelected)
+        self.saveNotes()
+        self.setWatch(False)
+        index = self.pcase_list.selection()
+        values= self.pcase_list.item(index)['values']
+        self.notes.delete(1.0, END)
+        self.updateInfo(values)
+        self.lastSelected = index
 
-    def updateInfo(self,pcaseString):
-        splitString = pcaseString.split('|')
-        pcase = splitString[0].strip()
-        cust_name = splitString[1].strip()
+    def updateInfo(self,values):
+
+        pcase = values[0]
+        cust_name = values[1]
 
         self.pcase_info.config(text=pcase)
         self.cust_info.config(text=cust_name)
@@ -830,14 +848,16 @@ class PCaser:
     def loadPCases(self):
         user = os.getlogin()
         data_folder = "C:\\Users\\%s\\AppData\\Roaming\\PCASR" %user
+        odd_even = True
         if os.path.isdir(data_folder):
-            self.pcase_list.delete(0, END)
+            self.pcase_list.delete(*self.pcase_list.get_children())
             data_file = data_folder+"\\pcasr.json"
             with open(data_file) as json_file:
                 data = json.load(json_file)
                 for case in data:
-                    print(data[case])
-                    self.pcase_list.insert(END,data[case]['pcase'] + " | "+data[case]['cust_name'])
+                    self.pcase_list.insert('','end',values=[data[case]['pcase'],data[case]['cust_name']],tags=[str(odd_even)])
+                    odd_even = not odd_even
+
 
     def newWindow(self):
         saveDialogWindow(self,False)
