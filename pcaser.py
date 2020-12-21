@@ -12,6 +12,8 @@ import queue
 import json
 from watchdog.observers import Observer
 from watchdog.events import PatternMatchingEventHandler
+from salesforce_api import Salesforce
+import sf_credentials
 
 class watchDog:
 
@@ -255,7 +257,7 @@ class saveDialogWindow:
 
         # Initialize tk instance and frame
         self.save_window = tk.Tk()
-        self.save_window.title("PCase Details")
+        self.save_window.title("New Entry")
         self.save_frame = Frame(self.save_window,borderwidth=1)
 
         # Control Location of Appearence
@@ -271,49 +273,49 @@ class saveDialogWindow:
         self.save_frame.pack()
 
         # Initialize Labels
-        self.customer_name = Label(self.save_frame,text="Customer Name")
-        self.pcase_number = Label(self.save_frame,text="PCASE")
         self.srd_link = Label(self.save_frame,text="SRD Link")
+        self.sf_link = Label(self.save_frame,text="SF Link")
 
         # Initialize Entries
-        self.customer_entry = Entry(self.save_frame,validate="focusout",validatecommand=self.validateCustomer)
-        self.pcase_entry = Entry(self.save_frame,validate="focusout",validatecommand=self.validatePCase)
-        self.srd_entry = Entry(self.save_frame,validate="focusout",validatecommand=self.validateSRD)
+        self.srd_entry = Entry(self.save_frame,validate="focusout",validatecommand=self.validateSRD,width=50)
+        self.sf_entry = Entry(self.save_frame,validate="focusout",validatecommand=self.validateSF,width=50)
 
         # ✔ ❌ ❓
         # Initialize Verify Labels, Label Messages, and Tooltips
-        self.pcase_valid = ttk.Label(self.save_frame,text="❓",width=3,foreground="#fcba03")
         self.srd_valid = ttk.Label(self.save_frame,text="❓",width=3,foreground="#fcba03")
-        self.customer_valid = ttk.Label(self.save_frame,text="❓",width=3,foreground="#fcba03")
+        self.sf_valid = ttk.Label(self.save_frame,text="❓",width=3,foreground="#fcba03")
 
-        self.pcase_tt = CreateToolTip(self.pcase_valid,"PCase will be validated when text is entered and the mouse leaves this box.")
         self.srd_tt = CreateToolTip(self.srd_valid,"SRD will be validated when text is entered and the mouse leaves this box.")
-        self.customer_tt = CreateToolTip(self.customer_valid,"CSR ID will be validated when text is entered and the mouse leaves this box.")
+        self.sf_tt = CreateToolTip(self.srd_valid,"SalesForce link will be validated when text is entered and the mouse leaves this box.")
+
 
         # Initialize Command Buttons
-        self.save_button = Button(self.save_window,text="Save", command=self.savePCase,state=DISABLED)
-        self.cancel_button = Button(self.save_window,text="Cancel",command=self.kill_window)
+        self.save_button = ttk.Button(self.save_window,text="Save", command=self.savePCase,state=DISABLED)
+        self.cancel_button = ttk.Button(self.save_window,text="Cancel",command=self.kill_window)
+        self.validate_button = ttk.Button(self.save_window,text="Validate")
 
         # Pack Command Buttons to Window
-        self.save_button.pack(side=RIGHT, padx=5, pady=5)
-        self.cancel_button.pack(side=RIGHT)
+        self.save_button.pack(side="right", padx=5, pady=5)
+        self.cancel_button.pack(side="right",padx=5)
+        self.validate_button.pack(side="left",padx=5)
 
         # Configure Grid Layout
-        self.customer_name.grid(row=0,column=0)
-        self.pcase_number.grid(row=1,column=0)
-        self.srd_link.grid(row=2,column=0)
+        self.sf_link.grid(row=2,column=0)
 
-        self.customer_entry.grid(row=0,column=1)
-        self.pcase_entry.grid(row=1,column=1)
-        self.srd_entry.grid(row=2,column=1)
+        self.sf_entry.grid(row=2,column=1)
 
-        self.pcase_valid.grid(row=1,column=2,padx=2,pady=2)
-        self.srd_valid.grid(row=2,column=2,padx=2,pady=2)
-        self.customer_valid.grid(row=0,column=2,padx=2,pady=2)
+        self.sf_valid.grid(row=2,column=2,padx=2,pady=2)
+
+        self.srd_link.grid(row=3,column=0)
+
+        self.srd_entry.grid(row=3,column=1)
+
+        self.srd_valid.grid(row=3,column=2,padx=2,pady=2)
+
 
         # Initialize Data File Location
         user = os.getlogin()
-        self.data_folder = "C:\\Users\\%s\\AppData\\Roaming\\PCASR" %user
+        self.data_folder = "C:\\Users\\%s\\AppData\\Roaming\\PCASR_DEV" %user
         self.data_file = self.data_folder+"\\pcasr.json"
 
         # If pcase already exists in data, load and validate
@@ -331,43 +333,84 @@ class saveDialogWindow:
                 self.validateCustomer()
 
     def savePCase(self):
-        pcase = self.pcase_entry.get().strip()
-        cust_name = self.customer_entry.get().strip()
-        srd_link = self.srd_entry.get().strip()
+        sf_link = self.sf_entry.get().strip()
 
-        if not pcase.strip() == "" and not cust_name.strip() == "":
+        srd_link = ""
+        if(self.validateSRD()):
+            srd_link = self.srd_entry.get()
 
-            if not os.path.isdir(self.data_folder):
-                os.mkdir(self.data_folder)
+        case_info = self.getSFInfo(sf_link)
 
-                data = {pcase:{'pcase':pcase,'cust_name':cust_name,'srd_link':srd_link,'notes':''}} 
+        case_info['srd_link'] = srd_link
+        case_info['notes'] = ''
+        pcase = case_info['pcase']
 
-                # Initialize Data File
-                with open(self.data_file,'w') as outfile:
-                    json.dump(data,outfile)
-                    self.kill_window()
-                self.the_parent.loadPCases()
+        if not os.path.isdir(self.data_folder):
+            os.mkdir(self.data_folder)
 
-            else:
-                json_file = open(self.data_file)
-                data = json.load(json_file)
-                if pcase in data: 
-                    data[pcase] = {'pcase':pcase,'cust_name':cust_name,'srd_link':srd_link,'notes':data[pcase]['notes']}
-                else:
-                    data[pcase] = {'pcase':pcase,'cust_name':cust_name,'srd_link':srd_link,'notes':''}
-                json_file.close()
-                with open(self.data_file,'w') as outfile:
-                    json.dump(data,outfile)
-                self.kill_window()
-                self.the_parent.loadPCases()
+            data = {} 
+            # Initialize Data File
+            with open(self.data_file,'w') as outfile:
+                json.dump(data,outfile)
 
+
+        json_file = open(self.data_file)
+        data = json.load(json_file)
+        if pcase not in data:
+            data[pcase] = case_info
         else:
-            messagebox.showwarning('Error', 'You must at least provide the PCASE and Customer Name to Save.')
+            messagebox.showwarning('Error', 'You have already added this case.')
+        json_file.close()
+        with open(self.data_file,'w') as outfile:
+            json.dump(data,outfile)
 
+        self.the_parent.json_date = data
+        self.kill_window()
+        self.the_parent.loadPCases()
+        self.the_parent.pcase_list.selection_set(pcase)
 
+    def getSFInfo(self,sf_link):
+        client = sf_credentials.client
+        case_id = sf_link.split('/')[-1]
+
+        print(sf_link)
+        print(sf_link.split('/'))
+        print(case_id)
+        case_info = client.sobjects.Case.get(case_id)
+
+        case_dict = {
+            'subject':case_info['Subject'],
+            'last_modified':case_info['LastModifiedDate'],
+            'case_owner':case_info['Case_Owner__c'],
+            'case_number':case_info['CaseNumber'],
+            'parent_case_owner':case_info['Parent_Case_Owner__c'],
+            'classification':case_info['Case_Classification__c'],
+            'cust_name':case_info['CSR_Username_Cases__c'],
+            'pcase':case_info['Z_Case_NoPath__c']
+            }
+
+        print(case_dict)
+        return case_dict
+
+    def validateSF(self):
+        url = self.sf_entry.get()
+        if "https://" not in url:
+            url = "https://" + url 
+        if validators.url(url):
+            self.sf_valid.config(text="✔",foreground="#198000")
+            self.sf_tt.setText("SF Link is a valid website")
+            self.stateHandler()
+            return True
+        else:
+            self.sf_valid.config(text="❌",foreground="#b00505") 
+            self.sf_tt.setText("SF Link is not a valid website")
+            self.stateHandler()
+            return False
 
     def validateSRD(self):
         url = self.srd_entry.get()
+        if "https://" not in url:
+            url = "https://" + url 
         if validators.url(url):
             self.srd_valid.config(text="✔",foreground="#198000")
             self.srd_tt.setText("SRD is a valid website")
@@ -378,33 +421,8 @@ class saveDialogWindow:
             return False
 
     # ✔ ❌ ❓
-    def validatePCase(self):
-        pcase = self.pcase_entry.get()
-        if pcase.strip() != "" and os.path.isdir("Z:\\IT Documents\\QA\\"+pcase):
-            self.pcase_valid.config(text="✔",foreground="#198000")
-            self.pcase_tt.setText("PCase is Valid")
-            self.stateHandler()
-            return True
-        else:
-            self.pcase_valid.config(text="❌",foreground="#b00505")
-            self.pcase_tt.setText("PCase folder not found")
-            self.stateHandler()
-            return False   
-    def validateCustomer(self):
-        cust = self.customer_entry.get()
-        if cust.strip() != "" and os.path.isdir("\\\\ssnj-netapp01\\imtest\\imstage01\\ftproot\\"+cust):
-            self.customer_valid.config(text="✔",foreground="#198000")
-            self.customer_tt.setText("CSR ID is Valid")
-            self.stateHandler()
-            return True
-        else:
-            self.customer_valid.config(text="❌",foreground="#b00505")
-            self.customer_tt.setText("CSR ID is invalid.")
-            self.stateHandler()
-            return False   
-
     def stateHandler(self):
-        if self.pcase_valid.cget('text') == "✔" and self.customer_valid.cget('text') == "✔":
+        if self.sf_valid.cget('text') == "✔":
             self.save_button.config(state=ACTIVE)
         else:
             self.save_button.config(state=DISABLED)
@@ -453,6 +471,7 @@ class PCaser:
         self.initMainFrame()
 
         self.all_servers = ["ssnj-imbisc10","ssnj-imbisc11","ssnj-imbisc12","ssnj-imbisc13","ssnj-imbisc20","ssnj-imbisc21"]
+        self.json_data = []
         self.server_list = []
 
         self.first_init = True
@@ -460,6 +479,7 @@ class PCaser:
         # Call GUI initialization methods
         self.initMenuBar()
         self.initInfoFrame()
+        self.initQuickButtons()
         self.initFTPFrame()
         self.initTabArea()
 
@@ -473,12 +493,15 @@ class PCaser:
 
         self.watching = False
         # Select the first listbox item if there is one
-        topSelect = self.pcase_list.item('I001')
-        if topSelect:
-            self.pcase_list.selection_set('I001')
-            self.updateInfo(topSelect['values'])
+        #try:
+        topSelect = self.pcase_list.identify_row(0)
+        print(topSelect)
+        self.pcase_list.selection_set(topSelect)
+        self.updateInfo(self.pcase_list.item(topSelect)['values'])
 
-            self.threadStart()
+        self.threadStart()
+        #except:
+         #   pass
 
 
         # Tell the window manager to give focus back after the X button is hit
@@ -491,7 +514,7 @@ class PCaser:
         quit()
 
     def initFTPFrame(self):
-        self.ftpList = Listbox(self.ftp_root_frame,height=8,width=65)
+        self.ftpList = Listbox(self.ftp_root_frame,height=6,width=65)
         self.ftpList.pack(fill=BOTH)
 
        
@@ -503,19 +526,19 @@ class PCaser:
         self.main_frame = ttk.Labelframe(self.mainwindow)
 
         self.pcase_frame = ttk.Labelframe(self.main_frame,text="PCase")
-
         self.pcase_list_frame2 = ttk.Labelframe(self.main_frame,text="PCase List")
 
         self.info_area_frame = ttk.Labelframe(self.pcase_frame,text="Info")
+        self.quick_button_frame = ttk.Labelframe(self.pcase_frame,text="Quick Links")
         self.ftp_root_frame = ttk.Labelframe(self.pcase_frame,text="FTP Root")
         self.tab_frame = ttk.Frame(self.pcase_frame)
 
         self.info_area_frame.grid_propagate(True)
-        self.info_area_frame.grid_columnconfigure(0,minsize=200)
         self.ftp_root_frame.grid_columnconfigure(0,pad=165)
 
         self.info_area_frame.grid(row=0,column=0)
-        self.ftp_root_frame.grid(row=1,column=0)
+        self.quick_button_frame.grid(row=1,column=0)
+        self.ftp_root_frame.grid(row=2,column=0)
         self.tab_frame.grid(row=3,column=0)
 
 
@@ -666,17 +689,17 @@ class PCaser:
 
     def initTreeView(self):
         # Define new treeview to hold PCases
-        columns=["PCase","CSR Name","Date Created"]
+        columns=["PCase","CSR Name"]#,"Date Created"]
         self.pcase_list = ttk.Treeview(self.pcase_list_frame2,height=30,columns=columns,show="headings")
         self.pcase_list.bind('<<TreeviewSelect>>',self.onselect)
 
         self.pcase_list.column('PCase',width=65,stretch=False,minwidth=65)
         self.pcase_list.column('CSR Name',width=150,stretch=False,minwidth=100)
-        self.pcase_list.column('Date Created',width=80,stretch=False,minwidth=80)
+        #self.pcase_list.column('Date Created',width=80,stretch=False,minwidth=80)
 
         self.pcase_list.heading('PCase',text="PCase")
         self.pcase_list.heading('CSR Name',text="CSR Name")
-        self.pcase_list.heading('Date Created',text="Date Created")
+        #self.pcase_list.heading('Date Created',text="Date Created")
 
         for col in columns:
             self.pcase_list.heading(col,command=lambda _col=col: self.treeview_sort_column(_col, False))
@@ -696,34 +719,56 @@ class PCaser:
         # reverse sort next time
         self.pcase_list.heading(col, command=lambda _col=col: self.treeview_sort_column(_col, not reverse))
 
+    def initQuickButtons(self):
+
+        self.quick_button_frame.grid_propagate(True)
+
+        self.pcase_button = ttk.Button(self.quick_button_frame,text="PCase",width=13,command=lambda: self.openDir("Z:\\IT Documents\\QA\\" + self.pcase_info.cget('text')))
+        self.srd_button = ttk.Button(self.quick_button_frame,text="SRD",width=13,command=self.openSRD)
+        self.ftp_root_button = ttk.Button(self.quick_button_frame,text="FTP Root",width=13,command=lambda: self.openDir("\\\\ssnj-netapp01\\imtest\\imstage01\\ftproot\\"+self.cust_info.cget('text') ))
+        self.sf_button = ttk.Button(self.quick_button_frame,text="SalesForce",width=13,command=lambda: self.openWebsite("test"))
+
+        self.pcase_button.grid(row=0,column=0,sticky="E",padx=5)
+        self.srd_button.grid(row=0,column=3,sticky="E",padx=5)
+        self.sf_button.grid(row=0,column=2,sticky="E",padx=5)
+        self.ftp_root_button.grid(row=0,column=1,sticky="E",padx=5)
+
 
     def initInfoFrame(self):
         # Initialize Info Section contents
         self.info_frame = self.info_area_frame
 
-        self.pcase_info = ttk.Label(self.info_frame,text="By Using The File Menu",font=("Arial",10,"bold"),width=20)
-        self.cust_info = ttk.Label(self.info_frame,text="File > New ",font=("Arial",10,"bold"),width=20)
+        self.pcase_info = ttk.Label(self.info_frame,text="By Using The File Menu",width=23)#font=("Arial",10,"bold"),width=20)
+        self.cust_info = ttk.Label(self.info_frame,text="File > New ",width=23)#font=("Arial",10,"bold"),width=20)
+        self.sf_info = ttk.Label(self.info_frame,text="",width=23)#font=("Arial",10,"bold"),width=20)
+        self.desc_info = ttk.Label(self.info_frame,text="",font=("Arial",10,"bold"),width=50)
 
-        self.vers_label = ttk.Label(self.info_frame,text="Version: ")
-        self.rev_label = ttk.Label(self.info_frame,text="Revision: ")
+        self.last_mod_info = ttk.Label(self.info_frame,text="",width=20)
+        self.owner_info = ttk.Label(self.info_frame,text="",width=20)
+        self.case_owner_info = ttk.Label(self.info_frame,text="",width=20)
 
-        self.vers_info = ttk.Label(self.info_frame,text="45")
-        self.rev_info = ttk.Label(self.info_frame,text="10/21/96")
+        self.last_mod_label = ttk.Label(self.info_frame,text="Last Modified: ",width=15)
+        self.owner_label = ttk.Label(self.info_frame,text="Current Owner: ",width=15)
+        self.case_owner_label = ttk.Label(self.info_frame,text="Case Owner: ",width=15)
 
-        self.pcase_button = ttk.Button(self.info_frame,text="PCASE",command=lambda: self.openDir("Z:\\IT Documents\\QA\\" + self.pcase_info.cget('text')))
-        self.srd_button = ttk.Button(self.info_frame,text="SRD",command=self.openSRD)
-        self.ftp_root_button = ttk.Button(self.info_frame,text="FTP Root",command=lambda: self.openDir("\\\\ssnj-netapp01\\imtest\\imstage01\\ftproot\\"+self.cust_info.cget('text') ))
+
 
         # Define Grid for Info Section Items
-        self.pcase_info.grid(row=1,column=0,padx=15)
-        self.cust_info.grid(row=0,column=0,padx=15)
-        self.vers_label.grid(row=0,column=1,)
-        self.rev_label.grid(row=1,column=1)
-        self.vers_info.grid(row=0,column=2)
-        self.rev_info.grid(row=1,column=2,)
-        self.pcase_button.grid(row=0,column=3,sticky="E",padx=5)
-        self.srd_button.grid(row=1,column=3,sticky="E",padx=5)
-        self.ftp_root_button.grid(row=2,column=3,sticky="E",padx=5)
+        self.desc_info.grid(row=0,column=0,columnspan=3,padx=5,sticky="W")
+        self.pcase_info.grid(row=1,column=0,padx=5,sticky="W")
+        self.cust_info.grid(row=3,column=0,padx=5,sticky="W")
+        self.sf_info.grid(row=2,column=0,padx=5,sticky="W")
+
+        self.last_mod_label.grid(row=1,column=1,padx=5,sticky="E")
+        self.owner_label.grid(row=2,column=1,padx=5,sticky="E")
+        self.case_owner_label.grid(row=3,column=1,padx=5,sticky="E")
+
+        self.last_mod_info.grid(row=1,column=2,padx=5,sticky="E")
+        self.owner_info.grid(row=2,column=2,padx=5,sticky="E")
+        self.case_owner_info.grid(row=3,column=2,padx=5,sticky="E")
+
+
+
 
     def initMenuBar(self):
         # Initialize Menu Bar and Menu Items
@@ -796,7 +841,7 @@ class PCaser:
 
     def saveNotes(self):
         user = os.getlogin()
-        data_folder = "C:\\Users\\%s\\AppData\\Roaming\\PCASR" %user
+        data_folder = "C:\\Users\\%s\\AppData\\Roaming\\PCASR_DEV" %user
         data_file = data_folder+"\\pcasr.json"
 
         if os.path.isdir(data_folder):
@@ -825,9 +870,16 @@ class PCaser:
 
         pcase = values[0]
         cust_name = values[1]
+        data = self.json_data
 
         self.pcase_info.config(text=pcase)
         self.cust_info.config(text=cust_name)
+
+        self.sf_info.config(text=data[pcase]['case_number'])
+        self.desc_info.config(text=data[pcase]['subject'])
+        self.last_mod_info.config(text=data[pcase]['last_modified'].split('.')[0][:-3].replace('T'," "))
+        self.owner_info.config(text=data[pcase]['case_owner'])
+        self.case_owner_info.config(text=data[pcase]['parent_case_owner'])
 
         self.ftpList.delete(0,self.ftpList.size())
         self.threadStart()
@@ -835,27 +887,33 @@ class PCaser:
         self.pcase_tree()
 
         user = os.getlogin()
-        data_folder = "C:\\Users\\%s\\AppData\\Roaming\\PCASR" %user
+        data_folder = "C:\\Users\\%s\\AppData\\Roaming\\PCASR_DEV" %user
         data_file = data_folder+"\\pcasr.json"
-        with open(data_file) as json_file:
-            data = json.load(json_file)
-            notes = data[pcase]['notes']
-            self.srd_info = data[pcase]['srd_link']
-            self.notes.insert(END,notes)
-            self.notehash = hash(self.notes.get("1.0","end"))
+        data = self.json_data
+        notes = data[pcase]['notes']
+        self.srd_info = data[pcase]['srd_link']
+        self.notes.insert(END,notes)
+        self.notehash = hash(self.notes.get("1.0","end"))
 
 
     def loadPCases(self):
         user = os.getlogin()
-        data_folder = "C:\\Users\\%s\\AppData\\Roaming\\PCASR" %user
+        data_folder = "C:\\Users\\%s\\AppData\\Roaming\\PCASR_DEV" %user
         odd_even = True
         if os.path.isdir(data_folder):
             self.pcase_list.delete(*self.pcase_list.get_children())
             data_file = data_folder+"\\pcasr.json"
-            with open(data_file) as json_file:
-                data = json.load(json_file)
+            if not self.json_data:
+                with open(data_file) as json_file:
+                    data = json.load(json_file)
+                    self.json_data = data
+                    for case in data:
+                        self.pcase_list.insert('','end',iid=[data[case]['pcase']],values=[data[case]['pcase'],data[case]['cust_name']],tags=[str(odd_even)])
+                        odd_even = not odd_even
+            else:
+                data = self.json_data
                 for case in data:
-                    self.pcase_list.insert('','end',values=[data[case]['pcase'],data[case]['cust_name']],tags=[str(odd_even)])
+                    self.pcase_list.insert('','end',iid=[data[case]['pcase']],values=[data[case]['pcase'],data[case]['cust_name']],tags=[str(odd_even)])
                     odd_even = not odd_even
 
 
