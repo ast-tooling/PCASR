@@ -741,7 +741,7 @@ class PCaser:
         self.pcase_info = ttk.Label(self.info_frame,text="By Using The File Menu",width=23)#font=("Arial",10,"bold"),width=20)
         self.cust_info = ttk.Label(self.info_frame,text="File > New ",width=23)#font=("Arial",10,"bold"),width=20)
         self.sf_info = ttk.Label(self.info_frame,text="",width=23)#font=("Arial",10,"bold"),width=20)
-        self.desc_info = ttk.Label(self.info_frame,text="",font=("Arial",10,"bold"),width=50)
+        self.desc_info = ttk.Label(self.info_frame,text="",font=("Arial",10,"bold"),width=54)
 
         self.last_mod_info = ttk.Label(self.info_frame,text="",width=20)
         self.owner_info = ttk.Label(self.info_frame,text="",width=20)
