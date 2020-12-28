@@ -331,8 +331,9 @@ class saveDialogWindow:
 
     def savePCase(self):
 
-        if not os.path.isdir(self.data_folder):
-            os.mkdir(self.data_folder)
+        if not os.path.exists(self.data_file):
+            if not os.path.isdir(self.data_folder):
+                os.mkdir(self.data_folder)
 
             data = {} 
             # Initialize Data File
@@ -482,7 +483,7 @@ class PCaser:
         self.initMainFrame()
 
         self.all_servers = ["ssnj-imbisc10","ssnj-imbisc11","ssnj-imbisc12","ssnj-imbisc13","ssnj-imbisc20","ssnj-imbisc21"]
-        self.json_data = []
+        self.json_data = {}
         self.notes_hash = ""
         self.server_list = []
 
@@ -523,7 +524,7 @@ class PCaser:
     def kill_window(self):
         self.setWatch(False)
         self.notes_hash = self.notes.get("1.0","end")
-        self.saveNotes()
+        self.savePCase()
         self.toplevel.destroy()
         quit()
 
@@ -755,7 +756,7 @@ class PCaser:
         self.pcase_info = ttk.Label(self.info_frame,text="By Using The File Menu",width=23)#font=("Arial",10,"bold"),width=20)
         self.cust_info = ttk.Label(self.info_frame,text="File > New ",width=23)#font=("Arial",10,"bold"),width=20)
         self.sf_info = ttk.Label(self.info_frame,text="",width=23)#font=("Arial",10,"bold"),width=20)
-        self.desc_info = ttk.Label(self.info_frame,text="",font=("Arial",10,"bold"),width=54)
+        self.desc_info = ttk.Label(self.info_frame,text="",font=("Arial",10,"bold"),width=51)
 
         self.last_mod_info = ttk.Label(self.info_frame,text="",width=20)
         self.owner_info = ttk.Label(self.info_frame,text="",width=20)
@@ -764,6 +765,8 @@ class PCaser:
         self.last_mod_label = ttk.Label(self.info_frame,text="Last Modified: ",width=15)
         self.owner_label = ttk.Label(self.info_frame,text="Current Owner: ",width=15)
         self.case_owner_label = ttk.Label(self.info_frame,text="Case Owner: ",width=15)
+
+        self.refresh_button = ttk.Button(self.info_frame,text="↻",width="3",command=self.refreshSFInfo())
 
 
 
@@ -780,6 +783,8 @@ class PCaser:
         self.last_mod_info.grid(row=1,column=2,padx=5,sticky="E")
         self.owner_info.grid(row=2,column=2,padx=5,sticky="E")
         self.case_owner_info.grid(row=3,column=2,padx=5,sticky="E")
+
+        self.refresh_button.grid(row=0,column=2,sticky="E",padx=5)
 
 
 
@@ -853,25 +858,8 @@ class PCaser:
     def killWindowWrapper(self,parent):
         self.kill_window()
 
-    def saveNotes(self):
-        user = os.getlogin()
-        data_folder = "C:\\Users\\%s\\AppData\\Roaming\\PCASR_DEV" %user
-        data_file = data_folder+"\\pcasr.json"
-
-        print(self.notes.get("1.0","end"))
-        if os.path.isdir(data_folder) and self.notes_hash and self.notes_hash != hash(self.notes.get("1.0","end")):
-            pcase = self.pcase_info.cget('text')
-            notes = self.notes.get("1.0","end")
-
-            data = self.json_data
-            data[pcase].update({'notes':notes.rstrip()})
-
-            with open(data_file,'w') as outfile:
-                json.dump(data,outfile)
-            self.notehash = hash(notes)
-
     def onselect(self,parent):
-        self.saveNotes()
+        self.savePCase()
         self.setWatch(False)
         index = self.pcase_list.selection()
         values= self.pcase_list.item(index)['values']
@@ -909,6 +897,24 @@ class PCaser:
         self.notes.insert(END,notes)
         self.notehash = hash(self.notes.get("1.0","end"))
 
+
+    def savePCase(self):
+        user = os.getlogin()
+        data_folder = "C:\\Users\\%s\\AppData\\Roaming\\PCASR_DEV" %user
+        data_file = data_folder+"\\pcasr.json"
+        data = self.json_data
+        if data:
+            if os.path.isdir(data_folder) and self.notes_hash and self.notes_hash != hash(self.notes.get("1.0","end")):
+                pcase = self.pcase_info.cget('text')
+                notes = self.notes.get("1.0","end")
+
+                
+                data[pcase].update({'notes':notes.rstrip()})
+                self.notehash = hash(notes)
+
+            with open(data_file,'w') as outfile:
+                json.dump(data,outfile)
+            
 
     def loadPCases(self):
         user = os.getlogin()
@@ -1037,6 +1043,38 @@ class PCaser:
                     copyFilesWindow(self,subFolder_path,subDir,selected_files)
         #else:
         #    messagebox.showwarning('Error', 'Please Enter a Valid PCASE\nBefore Trying to Open or Edit Files')
+
+    def refreshSFInfo(self):
+        self.data_file = "C:\\Users\\%s\\AppData\\Roaming\\PCASR_DEV\\config.txt" % os.getlogin()
+        if not os.path.exists(self.data_file):
+            messagebox.showwarning('Error', 'You must first add your sf credentials to\nC:\\Users\\<you>\\AppData\\Roaming\\PCASR\\credentials.txt\nAn example can be found at Z:\\AST\\Utilities\\PCASR')
+            return False
+        else:
+            config = configparser.ConfigParser()
+            config.read(self.data_file)
+
+            client = Salesforce(
+                username=config.get('credentials','username'),
+                password=config.get('credentials','password'),
+                security_token=config.get('credentials','security_token')
+                )
+
+            pcase = self.pcase_info.cget('text')
+            if pcase != 'By Using The File Menu':
+                case_id = self.json_data[pcase]['sf_link'].split('/')[-1]
+
+                case_info = client.sobjects.Case.get(case_id)
+
+
+                self.json_data[pcase]['last_modified'] = case_info['LastModifiedDate']
+                self.json_data[pcase]['case_owner'] = ['Case_Owner__c']
+                self.json_data[pcase]['parent_case_owner'] = case_info['Parent_Case_Owner__c']
+
+                self.updateInfo(self.pcase_list.item(topSelect)['values'])
+
+
+
+            
 
     def editTemplates(self):
         self.editFiles("\\FDT",".csv")
