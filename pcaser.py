@@ -13,7 +13,7 @@ import json
 from watchdog.observers import Observer
 from watchdog.events import PatternMatchingEventHandler
 from salesforce_api import Salesforce
-import sf_credentials
+import configparser
 
 class watchDog:
 
@@ -320,30 +320,16 @@ class saveDialogWindow:
 
         # If pcase already exists in data, load and validate
         if edit:
-            json_file = open(self.data_file)
-            data = json.load(json_file)
-            pcase = self.the_parent.pcase_info.cget('text')
+            data = self.the_parent.json_data
+            pcase = self.the_parent.pcase_list.item(self.the_parent.pcase_list.selection())['values'][0]
             if pcase in data:
-                self.customer_entry.insert(tk.END,data[pcase]['cust_name'])
-                self.pcase_entry.insert(tk.END,data[pcase]['pcase'])
                 self.srd_entry.insert(tk.END,data[pcase]['srd_link'])
+                self.sf_entry.insert(tk.END,data[pcase]['sf_link'])
 
                 self.validateSRD()
-                self.validatePCase()
-                self.validateCustomer()
+                self.validateSF()
 
     def savePCase(self):
-        sf_link = self.sf_entry.get().strip()
-
-        srd_link = ""
-        if(self.validateSRD()):
-            srd_link = self.srd_entry.get()
-
-        case_info = self.getSFInfo(sf_link)
-
-        case_info['srd_link'] = srd_link
-        case_info['notes'] = ''
-        pcase = case_info['pcase']
 
         if not os.path.isdir(self.data_folder):
             os.mkdir(self.data_folder)
@@ -353,44 +339,69 @@ class saveDialogWindow:
             with open(self.data_file,'w') as outfile:
                 json.dump(data,outfile)
 
+        sf_link = self.sf_entry.get().strip()
 
-        json_file = open(self.data_file)
-        data = json.load(json_file)
-        if pcase not in data:
-            data[pcase] = case_info
-        else:
-            messagebox.showwarning('Error', 'You have already added this case.')
-        json_file.close()
-        with open(self.data_file,'w') as outfile:
-            json.dump(data,outfile)
+        srd_link = ""
+        if(self.validateSRD()):
+            srd_link = self.srd_entry.get()
 
-        self.the_parent.json_date = data
-        self.kill_window()
-        self.the_parent.loadPCases()
-        self.the_parent.pcase_list.selection_set(pcase)
+        case_info = self.getSFInfo(sf_link)
+
+        if case_info:
+            case_info['srd_link'] = srd_link
+            case_info['sf_link'] = sf_link
+            case_info['notes'] = ''
+            pcase = case_info['pcase']
+
+            json_file = open(self.data_file)
+            data = json.load(json_file)
+            if pcase not in data:
+                data[pcase] = case_info
+            else:
+                messagebox.showwarning('Error', 'You have already added this case.')
+            json_file.close()
+            with open(self.data_file,'w') as outfile:
+                json.dump(data,outfile)
+
+            self.the_parent.json_data = data
+            self.kill_window()
+            self.the_parent.loadPCases()
+            self.the_parent.pcase_list.selection_set(pcase)
 
     def getSFInfo(self,sf_link):
-        client = sf_credentials.client
-        case_id = sf_link.split('/')[-1]
 
-        print(sf_link)
-        print(sf_link.split('/'))
-        print(case_id)
-        case_info = client.sobjects.Case.get(case_id)
+        if not os.path.exists(self.data_folder+"\\config.txt"):
+            messagebox.showwarning('Error', 'You must first add your sf credentials to\nC:\\Users\\<you>\\AppData\\Roaming\\PCASR\\credentials.txt\nAn example can be found at Z:\\AST\\Utilities\\PCASR')
+            return False
+        else:
+            config = configparser.ConfigParser()
+            config.read(self.data_folder+"\\config.txt")
 
-        case_dict = {
-            'subject':case_info['Subject'],
-            'last_modified':case_info['LastModifiedDate'],
-            'case_owner':case_info['Case_Owner__c'],
-            'case_number':case_info['CaseNumber'],
-            'parent_case_owner':case_info['Parent_Case_Owner__c'],
-            'classification':case_info['Case_Classification__c'],
-            'cust_name':case_info['CSR_Username_Cases__c'],
-            'pcase':case_info['Z_Case_NoPath__c']
-            }
+            client = Salesforce(
+                username=config.get('credentials','username'),
+                password=config.get('credentials','password'),
+                security_token=config.get('credentials','security_token')
+                )
+            case_id = sf_link.split('/')[-1]
 
-        print(case_dict)
-        return case_dict
+            print(sf_link)
+            print(sf_link.split('/'))
+            print(case_id)
+            case_info = client.sobjects.Case.get(case_id)
+
+            case_dict = {
+                'subject':case_info['Subject'],
+                'last_modified':case_info['LastModifiedDate'],
+                'case_owner':case_info['Case_Owner__c'],
+                'case_number':case_info['CaseNumber'],
+                'parent_case_owner':case_info['Parent_Case_Owner__c'],
+                'classification':case_info['Case_Classification__c'],
+                'cust_name':case_info['CSR_Username_Cases__c'],
+                'pcase':case_info['Z_Case_NoPath__c']
+                }
+
+            print(case_dict)
+            return case_dict
 
     def validateSF(self):
         url = self.sf_entry.get()
@@ -494,15 +505,15 @@ class PCaser:
 
         self.watching = False
         # Select the first listbox item if there is one
-        #try:
-        topSelect = self.pcase_list.identify_row(0)
-        print(topSelect)
-        self.pcase_list.selection_set(topSelect)
-        self.updateInfo(self.pcase_list.item(topSelect)['values'])
+        try:
+            topSelect = self.pcase_list.identify_row(0)
+            print(topSelect)
+            self.pcase_list.selection_set(topSelect)
+            self.updateInfo(self.pcase_list.item(topSelect)['values'])
 
-        self.threadStart()
-        #except:
-         #   pass
+            self.threadStart()
+        except:
+            pass
 
 
         # Tell the window manager to give focus back after the X button is hit
@@ -511,6 +522,8 @@ class PCaser:
 
     def kill_window(self):
         self.setWatch(False)
+        self.notes_hash = self.notes.get("1.0","end")
+        self.saveNotes()
         self.toplevel.destroy()
         quit()
 
@@ -725,9 +738,9 @@ class PCaser:
         self.quick_button_frame.grid_propagate(True)
 
         self.pcase_button = ttk.Button(self.quick_button_frame,text="PCase",width=13,command=lambda: self.openDir("Z:\\IT Documents\\QA\\" + self.pcase_info.cget('text')))
-        self.srd_button = ttk.Button(self.quick_button_frame,text="SRD",width=13,command=self.openSRD)
+        self.srd_button = ttk.Button(self.quick_button_frame,text="SRD",width=13,command=lambda: self.openWebsite(self.json_data[self.pcase_info.cget('text')]['srd_link']))
         self.ftp_root_button = ttk.Button(self.quick_button_frame,text="FTP Root",width=13,command=lambda: self.openDir("\\\\ssnj-netapp01\\imtest\\imstage01\\ftproot\\"+self.cust_info.cget('text') ))
-        self.sf_button = ttk.Button(self.quick_button_frame,text="SalesForce",width=13,command=lambda: self.openWebsite("test"))
+        self.sf_button = ttk.Button(self.quick_button_frame,text="SalesForce",width=13,command=lambda: self.openWebsite(self.json_data[self.pcase_info.cget('text')]['sf_link']))
 
         self.pcase_button.grid(row=0,column=0,sticky="E",padx=5)
         self.srd_button.grid(row=0,column=3,sticky="E",padx=5)
@@ -899,11 +912,10 @@ class PCaser:
 
     def loadPCases(self):
         user = os.getlogin()
-        data_folder = "C:\\Users\\%s\\AppData\\Roaming\\PCASR_DEV" %user
+        data_file = "C:\\Users\\%s\\AppData\\Roaming\\PCASR_DEV\\pcasr.json" %user
         odd_even = True
-        if os.path.isdir(data_folder):
+        if os.path.exists(data_file):
             self.pcase_list.delete(*self.pcase_list.get_children())
-            data_file = data_folder+"\\pcasr.json"
             if not self.json_data:
                 with open(data_file) as json_file:
                     data = json.load(json_file)
@@ -1068,7 +1080,10 @@ class PCaser:
             messagebox.showwarning('Error', 'You must be connected to the VPN to open this.')
 
     def openWebsite(self,page):
-        webbrowser.get('chrome').open(page)
+        if page:
+            webbrowser.get('chrome').open(page)
+        else:
+            messagebox.showwarning('Error', 'There is no SRD saved for this case.\nYou can add via Edit > Change PCase Details') 
         
 
 if __name__ == '__main__':
