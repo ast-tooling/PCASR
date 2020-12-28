@@ -472,6 +472,7 @@ class PCaser:
 
         self.all_servers = ["ssnj-imbisc10","ssnj-imbisc11","ssnj-imbisc12","ssnj-imbisc13","ssnj-imbisc20","ssnj-imbisc21"]
         self.json_data = []
+        self.notes_hash = ""
         self.server_list = []
 
         self.first_init = True
@@ -844,15 +845,14 @@ class PCaser:
         data_folder = "C:\\Users\\%s\\AppData\\Roaming\\PCASR_DEV" %user
         data_file = data_folder+"\\pcasr.json"
 
-        if os.path.isdir(data_folder):
+        print(self.notes.get("1.0","end"))
+        if os.path.isdir(data_folder) and self.notes_hash and self.notes_hash != hash(self.notes.get("1.0","end")):
             pcase = self.pcase_info.cget('text')
             notes = self.notes.get("1.0","end")
 
-            json_file = open(data_file)
-            data = json.load(json_file)
-            data[pcase].update({'notes':notes})
+            data = self.json_data
+            data[pcase].update({'notes':notes.rstrip()})
 
-            json_file.close()
             with open(data_file,'w') as outfile:
                 json.dump(data,outfile)
             self.notehash = hash(notes)
@@ -891,6 +891,7 @@ class PCaser:
         data_file = data_folder+"\\pcasr.json"
         data = self.json_data
         notes = data[pcase]['notes']
+        self.notes_hash = hash(notes)
         self.srd_info = data[pcase]['srd_link']
         self.notes.insert(END,notes)
         self.notehash = hash(self.notes.get("1.0","end"))
@@ -907,6 +908,8 @@ class PCaser:
                 with open(data_file) as json_file:
                     data = json.load(json_file)
                     self.json_data = data
+                    if 'notes' in data.keys():
+                        self.notes_hash = hash(data['notes'])
                     for case in data:
                         self.pcase_list.insert('','end',iid=[data[case]['pcase']],values=[data[case]['pcase'],data[case]['cust_name']],tags=[str(odd_even)])
                         odd_even = not odd_even
