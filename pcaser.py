@@ -315,7 +315,7 @@ class saveDialogWindow:
 
         # Initialize Data File Location
         user = os.getlogin()
-        self.data_folder = "C:\\Users\\%s\\AppData\\Roaming\\PCASR_DEV" %user
+        self.data_folder = "C:\\Users\\%s\\AppData\\Roaming\\PCASR" %user
         self.data_file = self.data_folder+"\\pcasr.json"
 
         # If pcase already exists in data, load and validate
@@ -888,7 +888,7 @@ class PCaser:
         self.pcase_tree()
 
         user = os.getlogin()
-        data_folder = "C:\\Users\\%s\\AppData\\Roaming\\PCASR_DEV" %user
+        data_folder = "C:\\Users\\%s\\AppData\\Roaming\\PCASR" %user
         data_file = data_folder+"\\pcasr.json"
         data = self.json_data
         notes = data[pcase]['notes']
@@ -900,7 +900,7 @@ class PCaser:
 
     def savePCase(self):
         user = os.getlogin()
-        data_folder = "C:\\Users\\%s\\AppData\\Roaming\\PCASR_DEV" %user
+        data_folder = "C:\\Users\\%s\\AppData\\Roaming\\PCASR" %user
         data_file = data_folder+"\\pcasr.json"
         data = self.json_data
         if data:
@@ -918,7 +918,7 @@ class PCaser:
 
     def loadPCases(self):
         user = os.getlogin()
-        data_file = "C:\\Users\\%s\\AppData\\Roaming\\PCASR_DEV\\pcasr.json" %user
+        data_file = "C:\\Users\\%s\\AppData\\Roaming\\PCASR\\pcasr.json" %user
         odd_even = True
         if os.path.exists(data_file):
             self.pcase_list.delete(*self.pcase_list.get_children())
@@ -1045,7 +1045,7 @@ class PCaser:
         #    messagebox.showwarning('Error', 'Please Enter a Valid PCASE\nBefore Trying to Open or Edit Files')
 
     def refreshSFInfo(self):
-        self.data_file = "C:\\Users\\%s\\AppData\\Roaming\\PCASR_DEV\\config.txt" % os.getlogin()
+        self.data_file = "C:\\Users\\%s\\AppData\\Roaming\\PCASR\\config.txt" % os.getlogin()
         if not os.path.exists(self.data_file):
             messagebox.showwarning('Error', 'You must first add your sf credentials to\nC:\\Users\\<you>\\AppData\\Roaming\\PCASR\\credentials.txt\nAn example can be found at Z:\\AST\\Utilities\\PCASR')
             return False
