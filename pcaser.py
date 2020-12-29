@@ -12,7 +12,7 @@ import queue
 import json
 from watchdog.observers import Observer
 from watchdog.events import PatternMatchingEventHandler
-from salesforce_api import Salesforce
+from simple_salesforce import Salesforce
 import configparser
 
 class watchDog:
@@ -388,7 +388,7 @@ class saveDialogWindow:
             print(sf_link)
             print(sf_link.split('/'))
             print(case_id)
-            case_info = client.sobjects.Case.get(case_id)
+            case_info = client.Case.get(case_id)
 
             case_dict = {
                 'subject':case_info['Subject'],
@@ -1063,7 +1063,7 @@ class PCaser:
             if pcase != 'By Using The File Menu':
                 case_id = self.json_data[pcase]['sf_link'].split('/')[-1]
 
-                case_info = client.sobjects.Case.get(case_id)
+                case_info = client.Case.get(case_id)
 
 
                 self.json_data[pcase]['last_modified'] = case_info['LastModifiedDate']
