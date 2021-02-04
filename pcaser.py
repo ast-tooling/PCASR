@@ -115,6 +115,10 @@ class copyFilesWindow:
         self.files = files
         self.already_copied = False
 
+        print("subFolder_path: "+str(subFolder_path))
+        print("subDir: "+str(subDir))
+        print("files: "+str(files))
+
         self.copy_window = tk.Tk()
         self.copy_window.title("Copying Files")
         self.copy_window.geometry('+%d+%d'%(parent.toplevel.winfo_x(),parent.toplevel.winfo_y()))
@@ -140,30 +144,80 @@ class copyFilesWindow:
         self.textbox.see(tk.END)  
 
     # method called by Copy button, handles opening threads
-    def copy_status(self):
-        if not self.already_copied:
-            self.already_copied = True
-            threadlist = []
-            for file in self.files:
-                self.text_insert("Copying " + file + '\n')
+    # def copy_status(self):
+    #     if not self.already_copied:
+    #         self.already_copied = True
+    #         self.threadlist = []
+    #         for file in self.files:
+    #             print(file)
+    #             self.text_insert("Copying " + file[0] + '\n')
+    #             if isinstance(file,list):
+    #                 if file[2] != 0:
+    #                     os.mkdir(self.subFolder_path+"\\"+file[0])
+    #                     for sub_file in os.listdir(self.subFolder_path+"\\"+file[0]):
+    #                         if os.path.isfile(self.subFolder_path+"\\"+file+'\\'+sub_file): 
+    #                             self.copy_main(sub_file,self.subDir+'\\'+file[0])
+    #                 else:
+    #                     self.copy_main(file[0], self.subDir+'\\'+file[0])
 
-                if self.subDir != "\\SAMPLE_DATA":
-                    for server in self.the_parent.server_list:
-                        self.text_insert("       Copying to "+ "\\\\"+server+ '\n')
-                        thread = threading.Thread(target=self.copy_files, args=[self.subFolder_path+"\\"+file,"\\\\"+server+self.subDir+"\\"+file])
-                        threadlist.append(thread)
-                        thread.start()
+    #             else:
+    #                 self.copy_main(file, self.subDir)
+
+
+    #         thread = threading.Thread(target=self.done_check, args=[self.threadlist])
+    #         thread.start()
+    #         self.textbox.after(100,self.thread_check)
+    #     else:
+    #          messagebox.showwarning('Error', 'Files already copied.  If you want to copy again, close this window.')
+
+
+    def copy_status(self):
+        self.threadlist = []
+        for file in self.files:
+            print(str(file))
+            if isinstance(file,list):
+                self.text_insert("Copying " + file[0] + ' Directory\n')
+                if file[2] != 0:
+                    relative_path = file[1]
+                    full_dir = self.subFolder_path+'\\'+file[0]+'\\'+relative_path
+                    mid_path = file[0]+'\\'+relative_path
+                    for sub_file in os.listdir(full_dir):
+                        if os.path.isfile(full_dir+'\\'+sub_file): 
+                            print(full_dir)
+                            print(sub_file)
+                            self.copy_main(sub_file,mid_path)
                 else:
-                    self.text_insert("       Copying to "+ "FTP ROOT"+ '\n')
-                    server = "\\\\ssnj-netapp01\\imtest\\imstage01\\ftproot\\"+self.the_parent.cust_info.cget('text')
-                    thread = threading.Thread(target=self.copy_files, args=[self.subFolder_path+"\\"+file,server+"\\"+file])
-                    threadlist.append(thread)
-                    thread.start()
-            thread = threading.Thread(target=self.done_check, args=[threadlist])
+                    self.copy_main(file[0], self.subDir+'\\'+file[1]+'\\'+file[0])
+
+            else:
+                self.copy_main(file,"")
+
+
+            thread = threading.Thread(target=self.done_check, args=[self.threadlist])
             thread.start()
             self.textbox.after(100,self.thread_check)
+
+
+
+    def copy_main(self,file,dir):
+        if "\\SAMPLE_DATA" in self.subDir:
+            self.text_insert("       Copying to FTP ROOT"+ '\n')
+            server = "\\\\ssnj-netapp01\\imtest\\imstage01\\ftproot\\"+self.the_parent.cust_info.cget('text')
+            thread = threading.Thread(target=self.copy_files, args=[self.subFolder_path+"\\"+file,server+"\\"+file])
+            self.threadlist.append(thread)
+            thread.start()
         else:
-             messagebox.showwarning('Error', 'Files already copied.  If you want to copy again, close this window.')
+            self.text_insert(file+' \n')
+            for server in self.the_parent.server_list:
+                try:
+                    os.mkdir("\\\\"+server+self.subDir+"\\"+dir)
+                    self.text_insert(dir + ' Folder Created\n')
+                except:
+                    self.text_insert(dir + ' Folder Already Exists\n')
+                self.text_insert("       Copying to \\\\"+server+ '\n')
+                thread = threading.Thread(target=self.copy_files, args=[self.subFolder_path+'\\'+dir+file,"\\\\"+server+self.subDir+"\\"+dir+file])
+                self.threadlist.append(thread)
+                thread.start()
 
 
     def copy_files(self,src,dst):
@@ -197,16 +251,19 @@ class copyFilesWindow:
 
 class filePickerWindow:
 
-    def __init__(self,parent,subFolder_path,files):
-        # save parent for further use
+    def __init__(self,parent,subFolder_path):
+        #save parent for further use
         self.the_parent = parent
 
         self.picker_window = tk.Tk()
         self.picker_window.title("File Selector")
-        picker_frame = tk.Frame(self.picker_window,relief=RAISED, borderwidth=1)
+
+        self.picker_frame = tk.Frame(self.picker_window,relief='raised', borderwidth=1,width=400,height=200)
+        self.picker_frame.pack_propagate(0)
+
+
         self.toplevel =parent.toplevel
-        self.infiles = files
-        self.files = []
+        self.subFolder_path = subFolder_path
         self.picker_window.geometry('+%d+%d'%(parent.toplevel.winfo_x(),parent.toplevel.winfo_y()))
 
         # Set this window to appear on top of all other windows
@@ -215,22 +272,21 @@ class filePickerWindow:
         # Tell the window manager to give focus back after the X button is hit
         self.picker_window.protocol("WM_DELETE_WINDOW", self.kill_window)
 
-        self.listbox = Listbox(self.picker_window,selectmode=MULTIPLE,width =50,height=len(files))
-        self.listbox.pack()
-        for index, file in enumerate(files):
-            self.listbox.insert(END,file)
+        self.pcase_tree()
+        self.files = []
 
         ok_button = tk.Button(self.picker_window,text="Select",command=self.ok_button)
         cancel_button = tk.Button(self.picker_window,text="Cancel", command=self.kill_window)
 
-        picker_frame.pack()
-        ok_button.pack(side=RIGHT, padx=5, pady=5)  
-        cancel_button.pack(side=RIGHT)
+        self.picker_frame.pack()
+        ok_button.pack(side='right', padx=5, pady=5)  
+        cancel_button.pack(side='right')
 
     def ok_button(self):
-        selected =  self.listbox.curselection()
+        selected =  self.tree.selection()
         for i in selected:
-            self.files.append(self.infiles[i])
+            print("ancestry.com results: "+self.lineage_hanlder(i,''))
+            self.files.append([self.tree.item(i)['text'],self.lineage_hanlder(i,""),len(self.tree.get_children(i))])
         self.kill_window()
 
     def show(self):
@@ -240,6 +296,70 @@ class filePickerWindow:
     def kill_window(self):
         self.the_parent.toplevel.wm_attributes("-disabled",False)
         self.picker_window.destroy()
+
+    def lineage_hanlder(self,child,childString):
+        sub_dir_path = self.get_lineage(child,childString)
+
+        if "\\" not in sub_dir_path:
+            return ""
+        else:
+            return "\\".join(sub_dir_path.split("\\")[:-1])+'\\'
+
+    def get_lineage(self,child,childString):
+        if child:
+            childString = self.tree.item(child)['text'] + '\\' + childString
+            child = self.tree.parent(child)
+            if "Z:" in self.tree.item(child)['text']:
+                child = ""
+            return self.get_lineage(child,childString)
+
+        return childString[:-1]
+
+    def pcase_tree(self):
+
+        dir = self.subFolder_path
+
+        self.nodes = dict()
+        frame = self.picker_frame
+
+        self.tree = ttk.Treeview(frame,height=10,selectmode='none')
+        self.tree.bind("<Double-1>", self.select)
+
+        self.ysb = ttk.Scrollbar(frame, orient='vertical', command=self.tree.yview)
+        self.tree.configure(yscroll=self.ysb.set)
+        self.tree.heading('#0', text='PCase SubFolder', anchor='w')
+
+        self.ysb.pack(side='right',fill='y')
+        self.tree.pack(fill='both')
+        
+
+        abspath = dir
+        self.insert_node('', abspath, abspath)
+        self.tree.bind('<<TreeviewOpen>>', self.open_node)
+
+        self.tree.focus(self.tree.get_children()[0])
+        self.tree.item(self.tree.focus(),open=True)
+        self.open_node('')
+
+    def select(self,event=None):
+        self.tree.selection_toggle(self.tree.focus())
+        return 'break'
+
+
+    def insert_node(self, parent, text, abspath):
+        node = self.tree.insert(parent, 'end', text=text, open=False)
+        if os.path.isdir(abspath):
+            self.nodes[node] = abspath
+            self.tree.insert(node, 'end')
+
+    def open_node(self, event):
+        node = self.tree.focus()
+        abspath = self.nodes.pop(node, None)
+        if abspath:
+            self.tree.delete(self.tree.get_children(node))
+            for p in os.listdir(abspath):
+                self.insert_node(node, p, os.path.join(abspath, p))
+
 
 class saveDialogWindow:
 
@@ -978,10 +1098,6 @@ class PCaser:
             self.open_node('')
 
 
-
-        #else:
-        #    messagebox.showwarning('Error', 'Please Enter a Valid PCASE\nBefore Trying to View The PCase File Tree')
-
     def insert_node(self, parent, text, abspath):
         node = self.tree.insert(parent, 'end', text=text, open=False)
         if os.path.isdir(abspath):
@@ -1019,7 +1135,7 @@ class PCaser:
                 os.startfile(subFolder_path+"\\"+files[0], 'open')
             else:
                 print(files)
-                selected_files = filePickerWindow(self,subFolder_path,files).show()
+                selected_files = filePickerWindow(self,subFolder_path).show()
                 if selected_files:
                     for file in selected_files:
                         print(file)
@@ -1035,10 +1151,11 @@ class PCaser:
             if len(files) == 0:
                 messagebox.showwarning('Error','No files found in directory')
             elif len(files) == 1:
+                print(files)
                 copyFilesWindow(self,subFolder_path,subDir,files)
             else:
                 print(files)
-                selected_files = filePickerWindow(self,subFolder_path,files).show()
+                selected_files = filePickerWindow(self,subFolder_path).show()
                 if selected_files:
                     copyFilesWindow(self,subFolder_path,subDir,selected_files)
         #else:
@@ -1112,7 +1229,7 @@ class PCaser:
 
     def openApplication(self,path):
         try:
-            messagebox.showinfo('Just a Second...', 'This can  a minute to open, please be patient.')
+            messagebox.showinfo('Just a Second...', 'This can take a minute to open, please be patient.')
             os.startfile(path)
         except:
             messagebox.showwarning('Error', 'You must be connected to the VPN to open this.')
