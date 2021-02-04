@@ -143,40 +143,15 @@ class copyFilesWindow:
         self.textbox.configure(state='disabled')
         self.textbox.see(tk.END)  
 
-    # method called by Copy button, handles opening threads
-    # def copy_status(self):
-    #     if not self.already_copied:
-    #         self.already_copied = True
-    #         self.threadlist = []
-    #         for file in self.files:
-    #             print(file)
-    #             self.text_insert("Copying " + file[0] + '\n')
-    #             if isinstance(file,list):
-    #                 if file[2] != 0:
-    #                     os.mkdir(self.subFolder_path+"\\"+file[0])
-    #                     for sub_file in os.listdir(self.subFolder_path+"\\"+file[0]):
-    #                         if os.path.isfile(self.subFolder_path+"\\"+file+'\\'+sub_file): 
-    #                             self.copy_main(sub_file,self.subDir+'\\'+file[0])
-    #                 else:
-    #                     self.copy_main(file[0], self.subDir+'\\'+file[0])
-
-    #             else:
-    #                 self.copy_main(file, self.subDir)
-
-
-    #         thread = threading.Thread(target=self.done_check, args=[self.threadlist])
-    #         thread.start()
-    #         self.textbox.after(100,self.thread_check)
-    #     else:
-    #          messagebox.showwarning('Error', 'Files already copied.  If you want to copy again, close this window.')
-
-
+    # Opens threads and hands off files to copy over to copy_main method
     def copy_status(self):
         self.threadlist = []
         for file in self.files:
             print(str(file))
             if isinstance(file,list):
                 self.text_insert("Copying " + file[0] + ' Directory\n')
+
+                # If This is a Folder
                 if file[2] != 0:
                     relative_path = file[1]
                     full_dir = self.subFolder_path+'\\'+file[0]+'\\'+relative_path
@@ -186,9 +161,11 @@ class copyFilesWindow:
                             print(full_dir)
                             print(sub_file)
                             self.copy_main(sub_file,mid_path)
+                # Not a Folder
                 else:
                     self.copy_main(file[0], self.subDir+'\\'+file[1]+'\\'+file[0])
 
+            # Single File Copy Shorthand from push files elif clause
             else:
                 self.copy_main(file,"")
 
@@ -198,30 +175,28 @@ class copyFilesWindow:
             self.textbox.after(100,self.thread_check)
 
 
-
+    # Handles destination specific copying logic before hand-off to copyfile method
     def copy_main(self,file,dir):
         if "\\SAMPLE_DATA" in self.subDir:
             self.text_insert("       Copying to FTP ROOT"+ '\n')
             server = "\\\\ssnj-netapp01\\imtest\\imstage01\\ftproot\\"+self.the_parent.cust_info.cget('text')
-            thread = threading.Thread(target=self.copy_files, args=[self.subFolder_path+"\\"+file,server+"\\"+file])
+            thread = threading.Thread(target=copyfile, args=[self.subFolder_path+"\\"+file,server+"\\"+file])
             self.threadlist.append(thread)
             thread.start()
         else:
             self.text_insert(file+' \n')
             for server in self.the_parent.server_list:
-                try:
-                    os.mkdir("\\\\"+server+self.subDir+"\\"+dir)
-                    self.text_insert(dir + ' Folder Created\n')
-                except:
-                    self.text_insert(dir + ' Folder Already Exists\n')
+                if dir:
+                    try:
+                        os.mkdir("\\\\"+server+self.subDir+"\\"+dir)
+                        self.text_insert('      '+dir + ' Folder Created\n')
+                    except:
+                        self.text_insert('      '+dir + ' Folder Already Exists\n')
                 self.text_insert("       Copying to \\\\"+server+ '\n')
-                thread = threading.Thread(target=self.copy_files, args=[self.subFolder_path+'\\'+dir+file,"\\\\"+server+self.subDir+"\\"+dir+file])
+                thread = threading.Thread(target=copyfile, args=[self.subFolder_path+'\\'+dir+file,"\\\\"+server+self.subDir+"\\"+dir+file])
                 self.threadlist.append(thread)
                 thread.start()
 
-
-    def copy_files(self,src,dst):
-        copyfile(src,dst)
 
     # works in conjunction with thread_check to provide updates to progress
     def done_check(self,threadlist):
