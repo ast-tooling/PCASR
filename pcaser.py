@@ -1,5 +1,4 @@
 import tkinter as tk
-import pygubu
 import subprocess
 from tkinter import messagebox, filedialog, RIGHT, RAISED, Listbox, END, MULTIPLE, TOP, BOTTOM, ttk, Frame, Label, Text, Scrollbar, Y,X, Message, Button, Menu, Entry, DISABLED,ACTIVE, BOTH
 import webbrowser
@@ -149,7 +148,7 @@ class copyFilesWindow:
         for file in self.files:
             print(str(file))
             if isinstance(file,list):
-                self.text_insert("Copying " + file[0] + ' Directory\n')
+                self.text_insert("Copying " + file[1] + ' Directory\n')
 
                 # If This is a Folder
                 if file[2] != 0:
@@ -163,7 +162,7 @@ class copyFilesWindow:
                             self.copy_main(sub_file,mid_path)
                 # Not a Folder
                 else:
-                    self.copy_main(file[0], self.subDir+'\\'+file[1]+'\\'+file[0])
+                    self.copy_main(file[0],file[1])
 
             # Single File Copy Shorthand from push files elif clause
             else:
@@ -180,7 +179,7 @@ class copyFilesWindow:
         if "\\SAMPLE_DATA" in self.subDir:
             self.text_insert("       Copying to FTP ROOT"+ '\n')
             server = "\\\\ssnj-netapp01\\imtest\\imstage01\\ftproot\\"+self.the_parent.cust_info.cget('text')
-            thread = threading.Thread(target=copyfile, args=[self.subFolder_path+"\\"+file,server+"\\"+file])
+            thread = threading.Thread(target=copyfile, args=[self.subFolder_path+"\\"+dir+file,server+"\\"+file])
             self.threadlist.append(thread)
             thread.start()
         else:
@@ -1156,7 +1155,7 @@ class PCaser:
                 case_id = self.json_data[pcase]['sf_link'].split('/')[-1]
 
                 case_info = client.Case.get(case_id)
-
+                print(case_info)
 
                 self.json_data[pcase]['last_modified'] = case_info['LastModifiedDate']
                 self.json_data[pcase]['case_owner'] = ['Case_Owner__c']
