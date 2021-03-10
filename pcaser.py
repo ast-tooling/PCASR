@@ -998,7 +998,7 @@ class PCaser:
         data_file = data_folder+"\\pcasr.json"
         data = self.json_data
         if data:
-            if os.path.isdir(data_folder) and self.notes_hash and self.notes_hash != hash(self.notes.get("1.0","end")):
+            if os.path.isdir(data_folder) and self.notes_hash != hash(self.notes.get("1.0","end")):
                 pcase = self.pcase_info.cget('text')
                 notes = self.notes.get("1.0","end")
 
