@@ -792,9 +792,7 @@ class PCaser:
             self.server_list = self.all_servers[:4] 
         print(self.server_list)
         print(self.radio_var.get())
-
-    def pushEverything(self):
-        pass
+        
 
     def initTreeView(self):
         # Define new treeview to hold PCases
@@ -1124,7 +1122,7 @@ class PCaser:
             files = self.filesInDir(subFolder_path,fileType)
             if len(files) == 0:
                 messagebox.showwarning('Error','No files found in directory')
-            elif len(files) == 1:
+            elif len(files) == 1 and not os.path.isdir(subFolder_path+'\\'+files[0]):
                 print(files)
                 copyFilesWindow(self,subFolder_path,subDir,files)
             else:
@@ -1190,6 +1188,12 @@ class PCaser:
         self.pushFiles("\\SAMPLE_DATA")        
     def pushRelease(self):
         self.pushFiles("\\VC\\Release\\Bin",)
+
+    def pushEverything(self):
+        self.pushFiles("\\VC\\Scripts",".py")
+        self.pushFiles("\\VC\\ParserConfigs",".xml")
+        self.pushFiles("\\VC\\Release\\Bin",)
+
 
     def openDir(self,path):
         expString = "explorer " + path
