@@ -860,7 +860,7 @@ class PCaser:
         self.owner_label = ttk.Label(self.info_frame,text="Current Owner: ",width=15)
         self.case_owner_label = ttk.Label(self.info_frame,text="Case Owner: ",width=15)
 
-        self.refresh_button = ttk.Button(self.info_frame,text="↻",width="3",command=self.refreshSFInfo())
+        self.refresh_button = ttk.Button(self.info_frame,text="↻",width="3",command=self.refreshSFInfo)
 
 
 
@@ -1136,10 +1136,11 @@ class PCaser:
         #    messagebox.showwarning('Error', 'Please Enter a Valid PCASE\nBefore Trying to Open or Edit Files')
 
     def refreshSFInfo(self):
+        print('does this do anything')
         self.data_file = "C:\\Users\\%s\\AppData\\Roaming\\PCASR\\config.txt" % os.getlogin()
         if not os.path.exists(self.data_file):
             messagebox.showwarning('Error', 'You must first add your sf credentials to\nC:\\Users\\<you>\\AppData\\Roaming\\PCASR\\credentials.txt\nAn example can be found at Z:\\AST\\Utilities\\PCASR')
-            return False
+
         else:
             config = configparser.ConfigParser()
             config.read(self.data_file)
@@ -1155,13 +1156,14 @@ class PCaser:
                 case_id = self.json_data[pcase]['sf_link'].split('/')[-1]
 
                 case_info = client.Case.get(case_id)
-                print(case_info)
 
                 self.json_data[pcase]['last_modified'] = case_info['LastModifiedDate']
-                self.json_data[pcase]['case_owner'] = ['Case_Owner__c']
+                self.json_data[pcase]['case_owner'] = case_info['Case_Owner__c']
                 self.json_data[pcase]['parent_case_owner'] = case_info['Parent_Case_Owner__c']
 
-                self.updateInfo(self.pcase_list.item(topSelect)['values'])
+                index = self.pcase_list.selection()
+                values= self.pcase_list.item(index)['values']
+                self.updateInfo(values)
 
 
 
