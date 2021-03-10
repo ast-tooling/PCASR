@@ -1113,7 +1113,7 @@ class PCaser:
                 if selected_files:
                     for file in selected_files:
                         print(file)
-                        os.startfile(subFolder_path+"\\"+file, 'open')
+                        os.startfile(subFolder_path+"\\"+file[1]+file[0], 'open')
         #else:
         #    messagebox.showwarning('Error', 'Please Enter a Valid PCASE\nBefore Trying to Open or Edit Files')
 
