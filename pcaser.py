@@ -763,7 +763,7 @@ class PCaser:
 
         # Buttons
 
-        self.push_all_button = ttk.Button(self.bot_frame,text="Push Everything",width=25,command=self.pushEverything)
+        #self.push_all_button = ttk.Button(self.bot_frame,text="Push Everything",width=25,command=self.pushEverything)
 
         # Grid Everything
         self.bot_frame.grid_columnconfigure(0,weight=2)
@@ -779,7 +779,7 @@ class PCaser:
         self.radio3.grid(row=2,column=0,sticky='w',padx=10)
         self.radio3.invoke()
 
-        self.push_all_button.grid(row=0,column=1,sticky='e',padx=10)
+        #self.push_all_button.grid(row=0,column=1,sticky='e',padx=10)
 
 
 
@@ -1187,11 +1187,6 @@ class PCaser:
     def pushSamples(self):
         self.pushFiles("\\SAMPLE_DATA")        
     def pushRelease(self):
-        self.pushFiles("\\VC\\Release\\Bin",)
-
-    def pushEverything(self):
-        self.pushFiles("\\VC\\Scripts",".py")
-        self.pushFiles("\\VC\\ParserConfigs",".xml")
         self.pushFiles("\\VC\\Release\\Bin",)
 
 
