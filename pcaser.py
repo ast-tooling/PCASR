@@ -578,6 +578,7 @@ class PCaser:
 
         self.all_servers = ["ssnj-imbisc10","ssnj-imbisc11","ssnj-imbisc12","ssnj-imbisc13","ssnj-imbisc20","ssnj-imbisc21"]
         self.json_data = {}
+        self.archive_data = {}
         self.notes_hash = ""
         self.server_list = []
 
@@ -596,15 +597,16 @@ class PCaser:
 
         # Populate the ListBox with PCases
         self.loadPCases()
+        self.loadArchive()
 
 
         self.watching = False
         # Select the first listbox item if there is one
         try:
-            topSelect = self.pcase_list.identify_row(0)
+            topSelect = topSelect = self.pcase_list.get_children()[0]
             print(topSelect)
             self.pcase_list.selection_set(topSelect)
-            self.updateInfo(self.pcase_list.item(topSelect)['values'])
+            self.updateInfo(self.pcase_list.item(topSelect)['values'],self.json_data)
 
             self.threadStart()
         except:
@@ -795,25 +797,138 @@ class PCaser:
         
 
     def initTreeView(self):
-        # Define new treeview to hold PCases
+
+         # Tab Definitions
+        self.pcase_tab_area = ttk.Notebook(self.pcase_list_frame2,width=245,height=650)
+        self.pcase_tab_area.bind('<<NotebookTabChanged>>', self.on_tab_change)
+
+        self.current_tab = Frame(self.pcase_tab_area)
+        self.archive_tab = Frame(self.pcase_tab_area)
+
+        self.pcase_tab_area.add(self.current_tab,text="            Current            ")
+        self.pcase_tab_area.add(self.archive_tab,text="            Archive            ")
+
+
+        # Define active tab contents
         columns=["PCase","CSR Name"]#,"Date Created"]
-        self.pcase_list = ttk.Treeview(self.pcase_list_frame2,height=30,columns=columns,show="headings")
+        self.pcase_list = ttk.Treeview(self.current_tab,height=32,columns=columns,show="headings")
         self.pcase_list.bind('<<TreeviewSelect>>',self.onselect)
 
-        self.pcase_list.column('PCase',width=65,stretch=False,minwidth=65)
-        self.pcase_list.column('CSR Name',width=150,stretch=False,minwidth=100)
+        self.pcase_list.column('PCase',width=78,stretch=False,minwidth=78)
+        self.pcase_list.column('CSR Name',width=163,stretch=False,minwidth=100)
         #self.pcase_list.column('Date Created',width=80,stretch=False,minwidth=80)
 
         self.pcase_list.heading('PCase',text="PCase")
         self.pcase_list.heading('CSR Name',text="CSR Name")
         #self.pcase_list.heading('Date Created',text="Date Created")
 
+        # Emable sorting
         for col in columns:
             self.pcase_list.heading(col,command=lambda _col=col: self.treeview_sort_column(_col, False))
 
-        self.pcase_list.tag_configure('True',background='lightgray')
+        self.pcase_list.grid(row=0,column=0)
 
-        self.pcase_list.pack()
+
+        # Define archive tab contents
+        columns=["PCase","CSR Name"]#,"Date Created"]
+        self.archive_list = ttk.Treeview(self.archive_tab,height=32,columns=columns,show="headings")
+        self.archive_list.bind('<<TreeviewSelect>>',self.onselect)
+
+        self.archive_list.column('PCase',width=78,stretch=False,minwidth=78)
+        self.archive_list.column('CSR Name',width=163,stretch=False,minwidth=100)
+        #self.pcase_list.column('Date Created',width=80,stretch=False,minwidth=80)
+
+        self.archive_list.heading('PCase',text="PCase")
+        self.archive_list.heading('CSR Name',text="CSR Name")
+        #self.pcase_list.heading('Date Created',text="Date Created")
+
+        # Emable sorting
+        for col in columns:
+            self.archive_list.heading(col,command=lambda _col=col: self.treeview_sort_column(_col, False))
+
+        self.archive_list.grid(row=0,column=0)
+
+        # Add function buttons
+        self.update_button = ttk.Button(self.pcase_list_frame2,text='Update',width=10,command=self.editWindow)
+        self.new_button = ttk.Button(self.pcase_list_frame2,text='New',width=10,command=self.newWindow)
+        self.archive_button = ttk.Button(self.pcase_list_frame2,text='Archive',width=10,command=self.archiveCase)
+
+        # Add items to frame
+        self.pcase_tab_area.grid(row=0,column=0,columnspan=3)
+        self.new_button.grid(row=1,column=0,padx=1)
+        self.update_button.grid(row=1,column=1,padx=1)
+        self.archive_button.grid(row=1,column=2,padx=1,pady=2)
+
+    def on_tab_change(self,event):
+        tab = event.widget.tab('current')['text']
+        if tab == "            Current            ":
+            self.archive_button.config(text='Archive')
+            topSelect = self.pcase_list.get_children()[0]
+            self.pcase_list.selection_set(topSelect)
+            self.updateInfo(self.pcase_list.item(topSelect)['values'],self.json_data)
+            self.threadStart()
+        elif tab == "            Archive            ":
+            self.archive_button.config(text='UnArchive')
+            topSelect = self.archive_list.get_children()[0]
+            self.archive_list.selection_set(topSelect)
+            #self.updateInfo(self.archive_list.item(topSelect)['values'],self.archive_data)
+
+            self.threadStart()
+
+
+    def archiveCase(self):
+
+        """
+        TODO: 
+        -Create mutator and accessor methods for
+            -data folder
+            -data file
+            -archive file
+            -current selection
+                -pcase, etc
+        -Replace all updates and retrievals with new methods
+        -finish archiveCase method
+        """
+
+        user = os.getlogin()
+        self.data_folder = "C:\\Users\\%s\\AppData\\Roaming\\PCASR" %user
+        self.data_file = self.data_folder+"\\archive.json"
+        self.pcase_file = self.data_folder+"\\pcasr.json"
+
+        pcase = self.pcase_info.cget('text')
+
+        if not os.path.exists(self.data_file):
+            data = {} 
+            # Initialize Data File
+            with open(self.data_file,'w') as outfile:
+                json.dump(data,outfile)
+
+        with open(self.data_file) as json_file:
+            data = json.load(json_file)
+            self.archive_data = data
+
+        self.archive_data[pcase] = self.json_data[pcase]
+        del self.json_data[pcase]
+
+        with open(self.pcase_file,'w') as outfile:
+            json.dump(self.json_data,outfile)
+
+        with open(self.data_file,'w') as outfile:
+            json.dump(self.archive_data,outfile)
+
+
+        self.loadPCases()
+        self.loadArchive()
+
+        try:
+            topSelect = self.pcase_list.get_children()[0]
+            self.pcase_list.selection_set(topSelect)
+            self.updateInfo(self.pcase_list.item(topSelect)['values'],self.json_data)
+
+            self.threadStart()
+        except:
+           pass
+
 
     def treeview_sort_column(self,col, reverse):
         l = [(self.pcase_list.set(k, col), k) for k in self.pcase_list.get_children('')]
@@ -956,14 +1071,22 @@ class PCaser:
         index = self.pcase_list.selection()
         values= self.pcase_list.item(index)['values']
         self.notes.delete(1.0, END)
-        self.updateInfo(values)
+        self.updateInfo(values,self.json_data)
         self.lastSelected = index
 
-    def updateInfo(self,values):
+    def archiveSelect(self,parent):
+        self.savePCase()
+        self.setWatch(False)
+        index = self.pcase_list.selection()
+        values= self.pcase_list.item(index)['values']
+        self.notes.delete(1.0, END)
+        self.updateInfo(values,self.archive_data)
+        self.lastSelected = index
+
+    def updateInfo(self,values,data):
 
         pcase = values[0]
         cust_name = values[1]
-        data = self.json_data
 
         self.pcase_info.config(text=pcase)
         self.cust_info.config(text=cust_name)
@@ -995,10 +1118,17 @@ class PCaser:
         data_folder = "C:\\Users\\%s\\AppData\\Roaming\\PCASR" %user
         data_file = data_folder+"\\pcasr.json"
         data = self.json_data
+        pcase = self.pcase_info.cget('text')
+        notes = self.notes.get("1.0","end")
+
+        try:
+            self.archive_data[pcase]
+            archive_flag = True
+        except:
+            archive_flag = False
+
         if data:
-            if os.path.isdir(data_folder) and self.notes_hash != hash(self.notes.get("1.0","end")):
-                pcase = self.pcase_info.cget('text')
-                notes = self.notes.get("1.0","end")
+            if os.path.isdir(data_folder) and self.notes_hash != hash(self.notes.get("1.0","end")) and not archive_flag:
 
                 
                 data[pcase].update({'notes':notes.rstrip()})
@@ -1011,7 +1141,7 @@ class PCaser:
     def loadPCases(self):
         user = os.getlogin()
         data_file = "C:\\Users\\%s\\AppData\\Roaming\\PCASR\\pcasr.json" %user
-        odd_even = True
+
         if os.path.exists(data_file):
             self.pcase_list.delete(*self.pcase_list.get_children())
             if not self.json_data:
@@ -1021,13 +1151,29 @@ class PCaser:
                     if 'notes' in data.keys():
                         self.notes_hash = hash(data['notes'])
                     for case in data:
-                        self.pcase_list.insert('','end',iid=[data[case]['pcase']],values=[data[case]['pcase'],data[case]['cust_name']],tags=[str(odd_even)])
-                        odd_even = not odd_even
+                        self.pcase_list.insert('','end',iid=[data[case]['pcase']],values=[data[case]['pcase'],data[case]['cust_name']])
             else:
                 data = self.json_data
                 for case in data:
-                    self.pcase_list.insert('','end',iid=[data[case]['pcase']],values=[data[case]['pcase'],data[case]['cust_name']],tags=[str(odd_even)])
-                    odd_even = not odd_even
+                    self.pcase_list.insert('','end',iid=[data[case]['pcase']],values=[data[case]['pcase'],data[case]['cust_name']])
+
+    def loadArchive(self):
+        user = os.getlogin()
+        data_file = "C:\\Users\\%s\\AppData\\Roaming\\PCASR\\archive.json" %user
+
+        if os.path.exists(data_file):
+            self.archive_list.delete(*self.archive_list.get_children())
+            if not self.archive_data:
+                with open(data_file) as json_file:
+                    data = json.load(json_file)
+                    self.archive_data = data
+                    for case in data:
+                        self.archive_list.insert('','end',iid=[data[case]['pcase']],values=[data[case]['pcase'],data[case]['cust_name']])
+            else:
+                data = self.archive_data
+                for case in data:
+                    self.archive_list.insert('','end',iid=[data[case]['pcase']],values=[data[case]['pcase'],data[case]['cust_name']])
+
 
 
     def newWindow(self):
@@ -1161,7 +1307,7 @@ class PCaser:
 
                 index = self.pcase_list.selection()
                 values= self.pcase_list.item(index)['values']
-                self.updateInfo(values)
+                self.updateInfo(values,self.json_data)
 
 
 
