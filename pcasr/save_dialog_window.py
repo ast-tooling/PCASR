@@ -1,18 +1,12 @@
 import tkinter as tk
-import subprocess
-from tkinter import messagebox, filedialog, RIGHT, RAISED, Listbox, END, MULTIPLE, TOP, BOTTOM, ttk, Frame, Label, Text, Scrollbar, Y,X, Message, Button, Menu, Entry, DISABLED,ACTIVE, BOTH
-import webbrowser
+from tkinter import ttk
 import validators
 import os
-from shutil import copyfile
-import time
-import threading
-import queue
 import json
-from watchdog.observers import Observer
-from watchdog.events import PatternMatchingEventHandler
 from simple_salesforce import Salesforce
 import configparser
+
+import create_tool_tip
 
 
 class saveDialogWindow:
@@ -32,7 +26,7 @@ class saveDialogWindow:
         # Initialize tk instance and frame
         self.save_window = tk.Tk()
         self.save_window.title("New Entry")
-        self.save_frame = Frame(self.save_window,borderwidth=1)
+        self.save_frame = tk.Frame(self.save_window,borderwidth=1)
 
         # Control Location of Appearence
         self.save_window.geometry('+%d+%d'%(parent.toplevel.winfo_x(),parent.toplevel.winfo_y()))
@@ -47,24 +41,24 @@ class saveDialogWindow:
         self.save_frame.pack()
 
         # Initialize Labels
-        self.srd_link = Label(self.save_frame,text="SRD Link")
-        self.sf_link = Label(self.save_frame,text="SF Link")
+        self.srd_link = tk.Label(self.save_frame,text="SRD Link")
+        self.sf_link = tk.Label(self.save_frame,text="SF Link")
 
         # Initialize Entries
-        self.srd_entry = Entry(self.save_frame,validate="focusout",validatecommand=self.validateSRD,width=50)
-        self.sf_entry = Entry(self.save_frame,validate="focusout",validatecommand=self.validateSF,width=50)
+        self.srd_entry = tk.Entry(self.save_frame,validate="focusout",validatecommand=self.validateSRD,width=50)
+        self.sf_entry = tk.Entry(self.save_frame,validate="focusout",validatecommand=self.validateSF,width=50)
 
         # ✔ ❌ ❓
         # Initialize Verify Labels, Label Messages, and Tooltips
         self.srd_valid = ttk.Label(self.save_frame,text="❓",width=3,foreground="#fcba03")
         self.sf_valid = ttk.Label(self.save_frame,text="❓",width=3,foreground="#fcba03")
 
-        self.srd_tt = CreateToolTip(self.srd_valid,"SRD will be validated when text is entered and the mouse leaves this box.")
-        self.sf_tt = CreateToolTip(self.srd_valid,"SalesForce link will be validated when text is entered and the mouse leaves this box.")
+        self.srd_tt = create_tool_tip.CreateToolTip(self.srd_valid,"SRD will be validated when text is entered and the mouse leaves this box.")
+        self.sf_tt = create_tool_tip.CreateToolTip(self.srd_valid,"SalesForce link will be validated when text is entered and the mouse leaves this box.")
 
 
         # Initialize Command Buttons
-        self.save_button = ttk.Button(self.save_window,text="Save", command=self.savePCase,state=DISABLED)
+        self.save_button = ttk.Button(self.save_window,text="Save", command=self.savePCase,state=tk.DISABLED)
         self.cancel_button = ttk.Button(self.save_window,text="Cancel",command=self.kill_window)
         self.validate_button = ttk.Button(self.save_window,text="Validate")
 
@@ -133,7 +127,7 @@ class saveDialogWindow:
             if pcase not in data:
                 data[pcase] = case_info
             else:
-                messagebox.showwarning('Error', 'You have already added this case.')
+                tk.messagebox.showwarning('Error', 'You have already added this case.')
             json_file.close()
             with open(self.data_file,'w') as outfile:
                 json.dump(data,outfile)
@@ -146,7 +140,7 @@ class saveDialogWindow:
     def getSFInfo(self,sf_link):
 
         if not os.path.exists(self.data_folder+"\\config.txt"):
-            messagebox.showwarning('Error', 'You must first add your sf credentials to\nC:\\Users\\<you>\\AppData\\Roaming\\PCASR\\credentials.txt\nAn example can be found at Z:\\AST\\Utilities\\PCASR')
+            tk.messagebox.showwarning('Error', 'You must first add your sf credentials to\nC:\\Users\\<you>\\AppData\\Roaming\\PCASR\\credentials.txt\nAn example can be found at Z:\\AST\\Utilities\\PCASR')
             return False
         else:
             config = configparser.ConfigParser()
@@ -209,9 +203,9 @@ class saveDialogWindow:
     # ✔ ❌ ❓
     def stateHandler(self):
         if self.sf_valid.cget('text') == "✔":
-            self.save_button.config(state=ACTIVE)
+            self.save_button.config(state=tk.ACTIVE)
         else:
-            self.save_button.config(state=DISABLED)
+            self.save_button.config(state=tk.DISABLED)
 
     def kill_window(self):
         self.the_parent.toplevel.wm_attributes("-disabled",False)

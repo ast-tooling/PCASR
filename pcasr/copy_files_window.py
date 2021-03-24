@@ -1,18 +1,9 @@
 import tkinter as tk
-import subprocess
-from tkinter import messagebox, filedialog, RIGHT, RAISED, Listbox, END, MULTIPLE, TOP, BOTTOM, ttk, Frame, Label, Text, Scrollbar, Y,X, Message, Button, Menu, Entry, DISABLED,ACTIVE, BOTH
-import webbrowser
-import validators
 import os
 from shutil import copyfile
-import time
 import threading
 import queue
-import json
-from watchdog.observers import Observer
-from watchdog.events import PatternMatchingEventHandler
-from simple_salesforce import Salesforce
-import configparser
+
 
 
 class copyFilesWindow:
@@ -45,15 +36,15 @@ class copyFilesWindow:
 
 
         self.textbox = tk.Text(master=self.copy_window)
-        self.textbox.pack(side=TOP)
+        self.textbox.pack(side=tk.TOP)
         self.start = tk.Button(master=self.copy_window,text="Copy Files",command=self.copy_status)
-        self.start.pack(side=BOTTOM)
+        self.start.pack(side=tk.BOTTOM)
         
 
     # wrapper method for textbox.insert to handle state disabling
     def text_insert(self,text):
         self.textbox.configure(state='normal')
-        self.textbox.insert(END, text)
+        self.textbox.insert(tk.END, text)
         self.textbox.configure(state='disabled')
         self.textbox.see(tk.END)  
 

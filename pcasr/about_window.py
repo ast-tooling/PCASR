@@ -1,18 +1,5 @@
 import tkinter as tk
-import subprocess
-from tkinter import messagebox, filedialog, RIGHT, RAISED, Listbox, END, MULTIPLE, TOP, BOTTOM, ttk, Frame, Label, Text, Scrollbar, Y,X, Message, Button, Menu, Entry, DISABLED,ACTIVE, BOTH
-import webbrowser
-import validators
-import os
-from shutil import copyfile
-import time
-import threading
-import queue
-import json
-from watchdog.observers import Observer
-from watchdog.events import PatternMatchingEventHandler
-from simple_salesforce import Salesforce
-import configparser
+from tkinter import ttk
 
 class aboutWindow:
 

@@ -1,16 +1,10 @@
 import tkinter as tk
 import subprocess
-from tkinter import messagebox, filedialog, RIGHT, RAISED, Listbox, END, MULTIPLE, TOP, BOTTOM, ttk, Frame, Label, Text, Scrollbar, Y,X, Message, Button, Menu, Entry, DISABLED,ACTIVE, BOTH
+from tkinter import ttk
 import webbrowser
-import validators
 import os
-from shutil import copyfile
-import time
 import threading
-import queue
 import json
-from watchdog.observers import Observer
-from watchdog.events import PatternMatchingEventHandler
 from simple_salesforce import Salesforce
 import configparser
 
@@ -18,7 +12,6 @@ import configparser
 import save_dialog_window
 import file_picker_window
 import copy_files_window
-import create_tool_tip
 import about_window
 import watch_dog
 
@@ -81,8 +74,8 @@ class PCaser:
         quit()
 
     def initFTPFrame(self):
-        self.ftpList = Listbox(self.ftp_root_frame,height=6,width=65)
-        self.ftpList.pack(fill=BOTH)
+        self.ftpList = tk.Listbox(self.ftp_root_frame,height=6,width=65)
+        self.ftpList.pack(fill=tk.BOTH)
 
        
     def initMainFrame(self):
@@ -117,7 +110,7 @@ class PCaser:
 
     def initTabArea(self):
         # Put a Space in Before The Tab Area for Visual Cleanliness
-        self.space_label = Label(self.tab_frame)
+        self.space_label = tk.Label(self.tab_frame)
         self.space_label.pack()
 
         # Remove Ugly Dotted Lines From Selected Tabs
@@ -135,10 +128,10 @@ class PCaser:
         # Tab Definitions
         self.tab_area = ttk.Notebook(self.tab_frame,width=400,height=380)
 
-        self.tab_1 = Frame(self.tab_area)
-        self.tab_2 = Frame(self.tab_area)
-        self.tab_3 = Frame(self.tab_area)
-        self.tab_4 = Frame(self.tab_area)
+        self.tab_1 = tk.Frame(self.tab_area)
+        self.tab_2 = tk.Frame(self.tab_area)
+        self.tab_3 = tk.Frame(self.tab_area)
+        self.tab_4 = tk.Frame(self.tab_area)
 
         self.tab_area.add(self.tab_1,text="Quick View")
         self.tab_area.add(self.tab_2,text="Notes")
@@ -148,13 +141,13 @@ class PCaser:
 
 
         # Tab 1 - Notes
-        self.notes = Text(self.tab_2)
-        self.note_scroll = Scrollbar(self.tab_2,command=self.notes.yview)
+        self.notes = tk.Text(self.tab_2)
+        self.note_scroll = tk.Scrollbar(self.tab_2,command=self.notes.yview)
         self.notes['yscrollcommand'] = self.note_scroll.set
 
         # Initialize Hash Value
         self.notehash = ""
-        self.note_scroll.pack(side=RIGHT,fill = Y)
+        self.note_scroll.pack(side=tk.RIGHT,fill = tk.Y)
         self.notes.pack()
 
 
@@ -258,8 +251,8 @@ class PCaser:
         self.pcase_tab_area = ttk.Notebook(self.pcase_list_frame2,width=245,height=650)
         self.pcase_tab_area.bind('<<NotebookTabChanged>>', self.on_tab_change)
 
-        self.current_tab = Frame(self.pcase_tab_area)
-        self.archive_tab = Frame(self.pcase_tab_area)
+        self.current_tab = tk.Frame(self.pcase_tab_area)
+        self.archive_tab = tk.Frame(self.pcase_tab_area)
 
         self.pcase_tab_area.add(self.current_tab,text="            Current            ")
         self.pcase_tab_area.add(self.archive_tab,text="            Archive            ")
@@ -454,12 +447,12 @@ class PCaser:
 
     def initMenuBar(self):
         # Initialize Menu Bar and Menu Items
-        self.menu_bar = Menu(self.mainwindow)
+        self.menu_bar = tk.Menu(self.mainwindow)
         self.toplevel.config(menu=self.menu_bar)
-        self.menu_item_1 = Menu(self.menu_bar,tearoff=False)
-        self.menu_item_2 = Menu(self.menu_bar,tearoff=False)
-        self.menu_item_3 = Menu(self.menu_bar,tearoff=False)
-        self.menu_item_4 = Menu(self.menu_bar,tearoff=False)
+        self.menu_item_1 = tk.Menu(self.menu_bar,tearoff=False)
+        self.menu_item_2 = tk.Menu(self.menu_bar,tearoff=False)
+        self.menu_item_3 = tk.Menu(self.menu_bar,tearoff=False)
+        self.menu_item_4 = tk.Menu(self.menu_bar,tearoff=False)
 
         self.toplevel.bind_all("<Control-n>",self.newWindowWrapper)
         self.toplevel.bind_all("<Control-q>",self.killWindowWrapper)
@@ -478,11 +471,11 @@ class PCaser:
         self.menu_item_3.add_command(label="Open XMLGenerator",command=lambda: self.openApplication("Z:\\AST\\Utilities\\XMLGenerator\\XmlGenerator.exe"))
         self.menu_item_3.add_command(label="Open BillGen Wrapper",command=lambda: self.openApplication("Z:\\AST\\Utilities\\BillGen\\BillGenWrapper.exe"))
         self.menu_item_3.add_separator()
-        self.menu_item_3.add_command(label="Run PDF Version Checker",state=DISABLED)
+        self.menu_item_3.add_command(label="Run PDF Version Checker",state=tk.DISABLED)
 
 
         # Add 4- Help Menu Subitems
-        self.menu_item_4.add_command(label="About", command=lambda:aboutWindow(self))
+        self.menu_item_4.add_command(label="About", command=lambda:about_window.aboutWindow(self))
         self.menu_item_4.add_command(label="Confluence Page",command=lambda: self.openWebsite("https://billtrust.atlassian.net/wiki/spaces/AT/overview"))
         
         # Add Menu Options to Bar
@@ -526,7 +519,7 @@ class PCaser:
         self.setWatch(False)
         index = self.pcase_list.selection()
         values= self.pcase_list.item(index)['values']
-        self.notes.delete(1.0, END)
+        self.notes.delete(1.0, tk.END)
         self.updateInfo(values,self.json_data)
         self.lastSelected = index
 
@@ -535,7 +528,7 @@ class PCaser:
         self.setWatch(False)
         index = self.pcase_list.selection()
         values= self.pcase_list.item(index)['values']
-        self.notes.delete(1.0, END)
+        self.notes.delete(1.0, tk.END)
         self.updateInfo(values,self.archive_data)
         self.lastSelected = index
 
@@ -565,7 +558,7 @@ class PCaser:
         notes = data[pcase]['notes']
         self.notes_hash = hash(notes)
         self.srd_info = data[pcase]['srd_link']
-        self.notes.insert(END,notes)
+        self.notes.insert(tk.END,notes)
         self.notehash = hash(self.notes.get("1.0","end"))
 
 
@@ -633,10 +626,10 @@ class PCaser:
 
 
     def newWindow(self):
-        saveDialogWindow(self,False)
+        save_dialog_window.saveDialogWindow(self,False)
 
     def editWindow(self):
-        saveDialogWindow(self,True)
+        save_dialog_window.saveDialogWindow(self,True)
 
     def run(self):
         self.mainwindow.mainloop()
@@ -659,8 +652,8 @@ class PCaser:
             self.tree.configure(yscroll=self.ysb.set)
             self.tree.heading('#0', text='PCase Folder', anchor='w')
 
-            self.ysb.pack(side=RIGHT,fill=Y)
-            self.tree.pack(fill=BOTH)
+            self.ysb.pack(side=tk.RIGHT,fill=tk.Y)
+            self.tree.pack(fill=tk.BOTH)
             
 
             abspath = "Z:\\IT Documents\\QA\\" + pcase
@@ -704,12 +697,12 @@ class PCaser:
             #file_path_string = filedialog.askopenfilenames(initialdir = fdt_path,filetypes = (("CSV files","*.csv"),("all files","*.*")))
             files = self.filesInDir(subFolder_path,fileType)
             if len(files) == 0:
-                messagebox.showwarning('Error','No files found in directory')
+                tk.messagebox.showwarning('Error','No files found in directory')
             elif len(files) == 1:
                 os.startfile(subFolder_path+"\\"+files[0], 'open')
             else:
                 print(files)
-                selected_files = filePickerWindow(self,subFolder_path).show()
+                selected_files = file_picker_window.filePickerWindow(self,subFolder_path).show()
                 if selected_files:
                     for file in selected_files:
                         print(file)
@@ -723,15 +716,15 @@ class PCaser:
             subFolder_path = "Z:\\IT Documents\\QA\\" + pcase + subDir
             files = self.filesInDir(subFolder_path,fileType)
             if len(files) == 0:
-                messagebox.showwarning('Error','No files found in directory')
+                tk.messagebox.showwarning('Error','No files found in directory')
             elif len(files) == 1 and not os.path.isdir(subFolder_path+'\\'+files[0]):
                 print(files)
-                copyFilesWindow(self,subFolder_path,subDir,files)
+                copy_files_window.copyFilesWindow(self,subFolder_path,subDir,files)
             else:
                 print(files)
-                selected_files = filePickerWindow(self,subFolder_path).show()
+                selected_files = file_picker_window.filePickerWindow(self,subFolder_path).show()
                 if selected_files:
-                    copyFilesWindow(self,subFolder_path,subDir,selected_files)
+                    copy_files_window.copyFilesWindow(self,subFolder_path,subDir,selected_files)
         #else:
         #    messagebox.showwarning('Error', 'Please Enter a Valid PCASE\nBefore Trying to Open or Edit Files')
 
@@ -739,7 +732,7 @@ class PCaser:
         print('does this do anything')
         self.data_file = "C:\\Users\\%s\\AppData\\Roaming\\PCASR\\config.txt" % os.getlogin()
         if not os.path.exists(self.data_file):
-            messagebox.showwarning('Error', 'You must first add your sf credentials to\nC:\\Users\\<you>\\AppData\\Roaming\\PCASR\\credentials.txt\nAn example can be found at Z:\\AST\\Utilities\\PCASR')
+            tk.messagebox.showwarning('Error', 'You must first add your sf credentials to\nC:\\Users\\<you>\\AppData\\Roaming\\PCASR\\credentials.txt\nAn example can be found at Z:\\AST\\Utilities\\PCASR')
 
         else:
             config = configparser.ConfigParser()
@@ -802,20 +795,20 @@ class PCaser:
         if srd:
             webbrowser.get('chrome').open(srd)
         else:
-            messagebox.showwarning('Error', 'URL appears to be invalid.\nPlease enter a valid URL.')
+            tk.messagebox.showwarning('Error', 'URL appears to be invalid.\nPlease enter a valid URL.')
 
     def openApplication(self,path):
         try:
-            messagebox.showinfo('Just a Second...', 'This can take a minute to open, please be patient.')
+            tk.messagebox.showinfo('Just a Second...', 'This can take a minute to open, please be patient.')
             os.startfile(path)
         except:
-            messagebox.showwarning('Error', 'You must be connected to the VPN to open this.')
+            tk.messagebox.showwarning('Error', 'You must be connected to the VPN to open this.')
 
     def openWebsite(self,page):
         if page:
             webbrowser.get('chrome').open(page)
         else:
-            messagebox.showwarning('Error', 'There is no SRD saved for this case.\nYou can add via Edit > Change PCase Details') 
+            tk.messagebox.showwarning('Error', 'There is no SRD saved for this case.\nYou can add via Edit > Change PCase Details') 
         
 
 if __name__ == '__main__':
