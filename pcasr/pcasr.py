@@ -30,6 +30,18 @@ class PCaser:
         self.archive_data = {}
         self.notes_hash = ""
         self.server_list = []
+        self.data_folder = ""
+        self.data_file = ""
+        self.archive_file = ""
+        
+        user = os.getlogin()
+        data_folder = "C:\\Users\\%s\\AppData\\Roaming\\PCASR" %user
+        data_file = data_folder+"\\pcasr.json"
+        archive_file = data_folder+"\\archive.json"
+        
+        self.setDataFolder(data_folder)
+        self.setDataFile(data_file)
+        self.setArchiveFile(archive_file)
 
         self.first_init = True
 
@@ -339,14 +351,12 @@ class PCaser:
         -finish archiveCase method
         """
 
-        user = os.getlogin()
-        self.data_folder = "C:\\Users\\%s\\AppData\\Roaming\\PCASR" %user
-        self.data_file = self.data_folder+"\\archive.json"
-        self.pcase_file = self.data_folder+"\\pcasr.json"
+        archive_file = self.getArchiveFile()
+        pcase_file = self.getPCaseFile()
 
         pcase = self.pcase_info.cget('text')
 
-        if not os.path.exists(self.data_file):
+        if not os.path.exists(self.archive_file):
             data = {} 
             # Initialize Data File
             with open(self.data_file,'w') as outfile:
@@ -359,10 +369,10 @@ class PCaser:
         self.archive_data[pcase] = self.json_data[pcase]
         del self.json_data[pcase]
 
-        with open(self.pcase_file,'w') as outfile:
+        with open(pcase_file,'w') as outfile:
             json.dump(self.json_data,outfile)
 
-        with open(self.data_file,'w') as outfile:
+        with open(archive_file,'w') as outfile:
             json.dump(self.archive_data,outfile)
 
 
@@ -551,10 +561,6 @@ class PCaser:
 
         self.pcase_tree()
 
-        user = os.getlogin()
-        data_folder = "C:\\Users\\%s\\AppData\\Roaming\\PCASR" %user
-        data_file = data_folder+"\\pcasr.json"
-        data = self.json_data
         notes = data[pcase]['notes']
         self.notes_hash = hash(notes)
         self.srd_info = data[pcase]['srd_link']
@@ -563,9 +569,8 @@ class PCaser:
 
 
     def savePCase(self):
-        user = os.getlogin()
-        data_folder = "C:\\Users\\%s\\AppData\\Roaming\\PCASR" %user
-        data_file = data_folder+"\\pcasr.json"
+        data_folder = self.getDataFolder()
+        data_file = self.getDataFile()
         data = self.json_data
         pcase = self.pcase_info.cget('text')
         notes = self.notes.get("1.0","end")
@@ -588,8 +593,7 @@ class PCaser:
             
 
     def loadPCases(self):
-        user = os.getlogin()
-        data_file = "C:\\Users\\%s\\AppData\\Roaming\\PCASR\\pcasr.json" %user
+        data_file = self.getDataFile()
 
         if os.path.exists(data_file):
             self.pcase_list.delete(*self.pcase_list.get_children())
@@ -607,8 +611,7 @@ class PCaser:
                     self.pcase_list.insert('','end',iid=[data[case]['pcase']],values=[data[case]['pcase'],data[case]['cust_name']])
 
     def loadArchive(self):
-        user = os.getlogin()
-        data_file = "C:\\Users\\%s\\AppData\\Roaming\\PCASR\\archive.json" %user
+        data_file = self.getArchiveFile()
 
         if os.path.exists(data_file):
             self.archive_list.delete(*self.archive_list.get_children())
@@ -730,13 +733,13 @@ class PCaser:
 
     def refreshSFInfo(self):
         print('does this do anything')
-        self.data_file = "C:\\Users\\%s\\AppData\\Roaming\\PCASR\\config.txt" % os.getlogin()
-        if not os.path.exists(self.data_file):
+        data_file = self.getDataFile()
+        if not os.path.exists(data_file):
             tk.messagebox.showwarning('Error', 'You must first add your sf credentials to\nC:\\Users\\<you>\\AppData\\Roaming\\PCASR\\credentials.txt\nAn example can be found at Z:\\AST\\Utilities\\PCASR')
 
         else:
             config = configparser.ConfigParser()
-            config.read(self.data_file)
+            config.read(data_file)
 
             client = Salesforce(
                 username=config.get('credentials','username'),
@@ -759,8 +762,18 @@ class PCaser:
                 self.updateInfo(values,self.json_data)
 
 
-
-            
+    def setDataFolder(self,folder):
+        self.data_folder = folder
+    def getDataFolder(self):
+        return self.data_folder
+    def setDataFile(self,file):
+        self.data_file = file
+    def getDataFile(self):
+        return self.data_file
+    def setArchiveFile(self,file):
+        self.archive_file = file
+    def getArchiveFile(self):
+        return self.archive_file            
 
     def editTemplates(self):
         self.editFiles("\\FDT",".csv")
