@@ -84,7 +84,7 @@ class copyFilesWindow:
     def copy_main(self,file,dir):
         if "\\SAMPLE_DATA" in self.subDir:
             self.text_insert("       Copying to FTP ROOT"+ '\n')
-            server = "\\\\ssnj-netapp01\\imtest\\imstage01\\ftproot\\"+self.the_parent.cust_info.cget('text')
+            server = "\\\\ssnj-netapp01\\imtest\\imstage01\\ftproot\\"+self.the_parent.getCustString()
             thread = threading.Thread(target=copyfile, args=[self.subFolder_path+"\\"+dir+file,server+"\\"+file])
             self.threadlist.append(thread)
             thread.start()

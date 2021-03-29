@@ -33,6 +33,8 @@ class PCaser:
         self.data_folder = ""
         self.data_file = ""
         self.archive_file = ""
+        self.pcase = ""
+        self.cust = ""
         
         user = os.getlogin()
         data_folder = "C:\\Users\\%s\\AppData\\Roaming\\PCASR" %user
@@ -324,17 +326,23 @@ class PCaser:
         tab = event.widget.tab('current')['text']
         if tab == "            Current            ":
             self.archive_button.config(text='Archive')
+            self.archive_button.config(command=self.archiveCase)
             topSelect = self.pcase_list.get_children()[0]
             self.pcase_list.selection_set(topSelect)
-            self.updateInfo(self.pcase_list.item(topSelect)['values'],self.json_data)
+            self.onselect(self)
             self.threadStart()
         elif tab == "            Archive            ":
             self.archive_button.config(text='UnArchive')
+            self.archive_button.config(command=self.unArchiveCase)
             topSelect = self.archive_list.get_children()[0]
             self.archive_list.selection_set(topSelect)
             #self.updateInfo(self.archive_list.item(topSelect)['values'],self.archive_data)
 
             self.threadStart()
+            
+    def unArchiveCase(self):
+        pass
+        
 
 
     def archiveCase(self):
@@ -342,27 +350,30 @@ class PCaser:
         """
         TODO: 
         -Create mutator and accessor methods for
-            -data folder
-            -data file
-            -archive file
-            -current selection
-                -pcase, etc
-        -Replace all updates and retrievals with new methods
-        -finish archiveCase method
+            x-data folder
+            x-data file 
+            x-archive file
+            x-current selection
+                x-pcase, etc
+        x-Replace all updates and retrievals with new methods
+        x-finish archiveCase method
+        
+        -finish unArchive method
+        -update updateInfo so it works with archive list
         """
 
         archive_file = self.getArchiveFile()
-        pcase_file = self.getPCaseFile()
+        pcase_file = self.getDataFile()
 
-        pcase = self.pcase_info.cget('text')
-
-        if not os.path.exists(self.archive_file):
+        pcase = self.getPCaseString()
+        
+        if not os.path.exists(archive_file):
             data = {} 
             # Initialize Data File
-            with open(self.data_file,'w') as outfile:
+            with open(archive_file,'w') as outfile:
                 json.dump(data,outfile)
 
-        with open(self.data_file) as json_file:
+        with open(archive_file) as json_file:
             data = json.load(json_file)
             self.archive_data = data
 
@@ -404,10 +415,10 @@ class PCaser:
 
         self.quick_button_frame.grid_propagate(True)
 
-        self.pcase_button = ttk.Button(self.quick_button_frame,text="PCase",width=13,command=lambda: self.openDir("Z:\\IT Documents\\QA\\" + self.pcase_info.cget('text')))
-        self.srd_button = ttk.Button(self.quick_button_frame,text="SRD",width=13,command=lambda: self.openWebsite(self.json_data[self.pcase_info.cget('text')]['srd_link']))
-        self.ftp_root_button = ttk.Button(self.quick_button_frame,text="FTP Root",width=13,command=lambda: self.openDir("\\\\ssnj-netapp01\\imtest\\imstage01\\ftproot\\"+self.cust_info.cget('text') ))
-        self.sf_button = ttk.Button(self.quick_button_frame,text="SalesForce",width=13,command=lambda: self.openWebsite(self.json_data[self.pcase_info.cget('text')]['sf_link']))
+        self.pcase_button = ttk.Button(self.quick_button_frame,text="PCase",width=13,command=lambda: self.openDir("Z:\\IT Documents\\QA\\" + self.getPCaseString()))
+        self.srd_button = ttk.Button(self.quick_button_frame,text="SRD",width=13,command=lambda: self.openWebsite(self.json_data[self.getPCaseString()]['srd_link']))
+        self.ftp_root_button = ttk.Button(self.quick_button_frame,text="FTP Root",width=13,command=lambda: self.openDir("\\\\ssnj-netapp01\\imtest\\imstage01\\ftproot\\"+self.getCustString() ))
+        self.sf_button = ttk.Button(self.quick_button_frame,text="SalesForce",width=13,command=lambda: self.openWebsite(self.json_data[self.getPCaseString()]['sf_link']))
 
         self.pcase_button.grid(row=0,column=0,sticky="E",padx=5)
         self.srd_button.grid(row=0,column=3,sticky="E",padx=5)
@@ -496,7 +507,7 @@ class PCaser:
 
 
     def threadStart(self):
-        self.server = "\\\\ssnj-netapp01\\imtest\\imstage01\\ftproot\\"+self.cust_info.cget('text') 
+        self.server = "\\\\ssnj-netapp01\\imtest\\imstage01\\ftproot\\"+self.getCustString() 
         self.saved_contents = []
         self.setWatch(True)
         thread = threading.Thread(target=watch_dog.watchDog, args=[self,self.server])
@@ -546,6 +557,9 @@ class PCaser:
 
         pcase = values[0]
         cust_name = values[1]
+        
+        self.setPCaseString(pcase)
+        self.setCustString(cust_name)
 
         self.pcase_info.config(text=pcase)
         self.cust_info.config(text=cust_name)
@@ -572,7 +586,7 @@ class PCaser:
         data_folder = self.getDataFolder()
         data_file = self.getDataFile()
         data = self.json_data
-        pcase = self.pcase_info.cget('text')
+        pcase = self.getPCaseString()
         notes = self.notes.get("1.0","end")
 
         try:
@@ -638,7 +652,7 @@ class PCaser:
         self.mainwindow.mainloop()
 
     def pcase_tree(self):
-        pcase = self.pcase_info.cget('text')
+        pcase = self.getPCaseString()
         if pcase:
             if self.first_init:
                 self.nodes = dict()
@@ -694,7 +708,7 @@ class PCaser:
 
 
     def editFiles(self,subDir,fileType=""):
-        pcase = self.pcase_info.cget('text')
+        pcase = self.getPCaseString()
         if pcase:
             subFolder_path = "Z:\\IT Documents\\QA\\" + pcase + subDir
             #file_path_string = filedialog.askopenfilenames(initialdir = fdt_path,filetypes = (("CSV files","*.csv"),("all files","*.*")))
@@ -714,7 +728,7 @@ class PCaser:
         #    messagebox.showwarning('Error', 'Please Enter a Valid PCASE\nBefore Trying to Open or Edit Files')
 
     def pushFiles(self,subDir,fileType=""):
-        pcase = self.pcase_info.cget('text')
+        pcase = self.getPCaseString()
         if pcase:
             subFolder_path = "Z:\\IT Documents\\QA\\" + pcase + subDir
             files = self.filesInDir(subFolder_path,fileType)
@@ -747,7 +761,7 @@ class PCaser:
                 security_token=config.get('credentials','security_token')
                 )
 
-            pcase = self.pcase_info.cget('text')
+            pcase = self.getPCaseString()
             if pcase != 'By Using The File Menu':
                 case_id = self.json_data[pcase]['sf_link'].split('/')[-1]
 
@@ -773,7 +787,16 @@ class PCaser:
     def setArchiveFile(self,file):
         self.archive_file = file
     def getArchiveFile(self):
-        return self.archive_file            
+        return self.archive_file    
+
+    def setPCaseString(self,pcase):
+        self.pcase=pcase
+    def getPCaseString(self):
+        return self.pcase
+    def setCustString(self,cust):
+        self.cust = cust
+    def getCustString(self):
+        return self.cust     
 
     def editTemplates(self):
         self.editFiles("\\FDT",".csv")
