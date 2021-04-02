@@ -295,7 +295,7 @@ class PCaser:
         # Define archive tab contents
         columns=["PCase","CSR Name"]#,"Date Created"]
         self.archive_list = ttk.Treeview(self.archive_tab,height=32,columns=columns,show="headings")
-        self.archive_list.bind('<<TreeviewSelect>>',self.onselect)
+        self.archive_list.bind('<<TreeviewSelect>>',self.archiveSelect)
 
         self.archive_list.column('PCase',width=78,stretch=False,minwidth=78)
         self.archive_list.column('CSR Name',width=163,stretch=False,minwidth=100)
@@ -327,21 +327,54 @@ class PCaser:
         if tab == "            Current            ":
             self.archive_button.config(text='Archive')
             self.archive_button.config(command=self.archiveCase)
+            self.tab_area.tab(1,state="normal")
             topSelect = self.pcase_list.get_children()[0]
             self.pcase_list.selection_set(topSelect)
             self.onselect(self)
             self.threadStart()
         elif tab == "            Archive            ":
+            self.savePCase()
             self.archive_button.config(text='UnArchive')
             self.archive_button.config(command=self.unArchiveCase)
+            self.tab_area.tab(1,state="disabled")
             topSelect = self.archive_list.get_children()[0]
             self.archive_list.selection_set(topSelect)
             #self.updateInfo(self.archive_list.item(topSelect)['values'],self.archive_data)
+            self.archiveSelect(self)
 
             self.threadStart()
             
     def unArchiveCase(self):
-        pass
+        archive_file = self.getArchiveFile()
+        pcase_file = self.getDataFile()
+
+        pcase = self.getPCaseString()
+        
+        with open(archive_file) as json_file:
+            data = json.load(json_file)
+            self.archive_data = data
+
+        self.json_data[pcase] = self.archive_data[pcase]
+        del self.archive_data[pcase]
+
+        with open(pcase_file,'w') as outfile:
+            json.dump(self.json_data,outfile)
+
+        with open(archive_file,'w') as outfile:
+            json.dump(self.archive_data,outfile)
+
+
+        self.loadPCases()
+        self.loadArchive()
+
+        try:
+            topSelect = self.pcase_list.get_children()[0]
+            self.pcase_list.selection_set(topSelect)
+            self.updateInfo(self.pcase_list.item(topSelect)['values'],self.json_data)
+
+            self.threadStart()
+        except:
+           pass
         
 
 
@@ -543,15 +576,15 @@ class PCaser:
         self.notes.delete(1.0, tk.END)
         self.updateInfo(values,self.json_data)
         self.lastSelected = index
-
+        
     def archiveSelect(self,parent):
-        self.savePCase()
         self.setWatch(False)
-        index = self.pcase_list.selection()
-        values= self.pcase_list.item(index)['values']
+        index = self.archive_list.selection()
+        values= self.archive_list.item(index)['values']
         self.notes.delete(1.0, tk.END)
         self.updateInfo(values,self.archive_data)
         self.lastSelected = index
+
 
     def updateInfo(self,values,data):
 
