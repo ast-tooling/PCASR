@@ -8,7 +8,11 @@ import configparser
 
 import create_tool_tip
 
+'''Main Class for 'save' window
 
+Handles requesting user input for pcase information to save for new and 
+existing pcases.
+'''
 class saveDialogWindow:
 
     def __init__(self,parent,edit):
@@ -153,9 +157,6 @@ class saveDialogWindow:
                 )
             case_id = sf_link.split('/')[-1]
 
-            print(sf_link)
-            print(sf_link.split('/'))
-            print(case_id)
             case_info = client.Case.get(case_id)
 
             case_dict = {
@@ -169,7 +170,6 @@ class saveDialogWindow:
                 'pcase':case_info['Z_Case_NoPath__c']
                 }
 
-            print(case_dict)
             return case_dict
 
     def validateSF(self):

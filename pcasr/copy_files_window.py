@@ -5,7 +5,10 @@ import threading
 import queue
 
 
-
+'''Defines the 'CopyFiles' Window and handles copying logic
+    
+    I'm sorry if you're trying to debug this, I know it's messy
+'''
 class copyFilesWindow:
 
     the_queue = queue.Queue()
@@ -41,14 +44,16 @@ class copyFilesWindow:
         self.start.pack(side=tk.BOTTOM)
         
 
-    # wrapper method for textbox.insert to handle state disabling
+    '''wrapper method for textbox.insert to handle state disabling
+    '''
     def text_insert(self,text):
         self.textbox.configure(state='normal')
         self.textbox.insert(tk.END, text)
         self.textbox.configure(state='disabled')
         self.textbox.see(tk.END)  
 
-    # Opens threads and hands off files to copy over to copy_main method
+    '''Opens threads and hands off files to copy over to copy_main method
+    '''
     def copy_status(self):
         self.threadlist = []
         for file in self.files:
@@ -80,7 +85,8 @@ class copyFilesWindow:
             self.textbox.after(100,self.thread_check)
 
 
-    # Handles destination specific copying logic before hand-off to copyfile method
+    '''Handles destination specific copying logic before hand-off to copyfile method
+    '''
     def copy_main(self,file,dir):
         if "\\SAMPLE_DATA" in self.subDir:
             self.text_insert("       Copying to FTP ROOT"+ '\n')
@@ -103,7 +109,8 @@ class copyFilesWindow:
                 thread.start()
 
 
-    # works in conjunction with thread_check to provide updates to progress
+    '''works in conjunction with thread_check to provide updates to progress
+    '''
     def done_check(self,threadlist):
         print(threadlist)
         while True:
@@ -111,7 +118,8 @@ class copyFilesWindow:
                 self.the_queue.put("Done")
                 break
 
-    # works in conjunction with done_check to provide updates to progress
+    '''works in conjunction with done_check to provide updates to progress
+    '''
     def thread_check(self):
         try:
             message = self.the_queue.get(block=False)

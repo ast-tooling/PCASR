@@ -2,6 +2,8 @@ import tkinter as tk
 from tkinter import ttk
 import os
 
+'''Main Class for 'FilePicker' Window
+'''
 class filePickerWindow:
 
     def __init__(self,parent,subFolder_path):
@@ -38,7 +40,6 @@ class filePickerWindow:
     def ok_button(self):
         selected =  self.tree.selection()
         for i in selected:
-            print("ancestry.com results: "+self.lineage_hanlder(i,''))
             self.files.append([self.tree.item(i)['text'],self.lineage_hanlder(i,""),len(self.tree.get_children(i))])
         self.kill_window()
 
@@ -49,7 +50,9 @@ class filePickerWindow:
     def kill_window(self):
         self.the_parent.toplevel.wm_attributes("-disabled",False)
         self.picker_window.destroy()
-
+    
+    '''Helper function for get_lineage
+    '''
     def lineage_hanlder(self,child,childString):
         sub_dir_path = self.get_lineage(child,childString)
 
@@ -58,6 +61,8 @@ class filePickerWindow:
         else:
             return "\\".join(sub_dir_path.split("\\")[:-1])+'\\'
 
+    '''Recursive function to find a folder's parent folders
+    '''
     def get_lineage(self,child,childString):
         if child:
             childString = self.tree.item(child)['text'] + '\\' + childString
@@ -67,7 +72,9 @@ class filePickerWindow:
             return self.get_lineage(child,childString)
 
         return childString[:-1]
-
+    
+    '''Define the actual file picker UI utilizing a treeview
+    '''
     def pcase_tree(self):
 
         dir = self.subFolder_path
@@ -94,17 +101,22 @@ class filePickerWindow:
         self.tree.item(self.tree.focus(),open=True)
         self.open_node('')
 
+    '''Helper method for pcase_tree
+    '''
     def select(self,event=None):
         self.tree.selection_toggle(self.tree.focus())
         return 'break'
 
-
+    '''Helper method for pcase_tree
+    '''
     def insert_node(self, parent, text, abspath):
         node = self.tree.insert(parent, 'end', text=text, open=False)
         if os.path.isdir(abspath):
             self.nodes[node] = abspath
             self.tree.insert(node, 'end')
-
+            
+    '''Helper method for pcase_tree
+    '''
     def open_node(self, event):
         node = self.tree.focus()
         abspath = self.nodes.pop(node, None)

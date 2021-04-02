@@ -15,12 +15,19 @@ import copy_files_window
 import about_window
 import watch_dog
 
+
+'''The Main Class of the project.  
+
+This both creates the UI for the window and 
+drives the logic.
+'''
 class PCaser:
 
     webbrowser.register('chrome',None,webbrowser.BackgroundBrowser("C://Program Files (x86)//Google//Chrome//Application//chrome.exe"))
     webbrowser.register('firefox',None,webbrowser.BackgroundBrowser("C://Program Files //Mozilla Firefox//Chrome//firefox.exe"))
 
-
+    ''' Configure initial variables and call all the methods that instantiate their sub-areas of the UI
+    '''
     def __init__(self):
 
         self.initMainFrame()
@@ -67,7 +74,6 @@ class PCaser:
         # Select the first listbox item if there is one
         try:
             topSelect = topSelect = self.pcase_list.get_children()[0]
-            print(topSelect)
             self.pcase_list.selection_set(topSelect)
             self.updateInfo(self.pcase_list.item(topSelect)['values'],self.json_data)
 
@@ -85,7 +91,6 @@ class PCaser:
         self.notes_hash = self.notes.get("1.0","end")
         self.savePCase()
         self.toplevel.destroy()
-        quit()
 
     def initFTPFrame(self):
         self.ftpList = tk.Listbox(self.ftp_root_frame,height=6,width=65)
@@ -149,7 +154,7 @@ class PCaser:
 
         self.tab_area.add(self.tab_1,text="Quick View")
         self.tab_area.add(self.tab_2,text="Notes")
-        self.tab_area.add(self.tab_3,text="Sync/Push")
+        self.tab_area.add(self.tab_3,text="Edit/Push")
         self.tab_area.add(self.tab_4,text="Tab 4")
         self.tab_area.pack(expand=1,fill="both")
 
@@ -165,7 +170,7 @@ class PCaser:
         self.notes.pack()
 
 
-        # Tab 3 - Probably the Sync/Push Area
+        # Tab 3 - Edit/Push Area
 
 
         self.top_frame = ttk.Labelframe(self.tab_3)
@@ -244,7 +249,6 @@ class PCaser:
         self.radio3.grid(row=2,column=0,sticky='w',padx=10)
         self.radio3.invoke()
 
-        #self.push_all_button.grid(row=0,column=1,sticky='e',padx=10)
 
 
 
@@ -255,8 +259,6 @@ class PCaser:
             self.server_list = self.all_servers[-2:]
         else:
             self.server_list = self.all_servers[:4] 
-        print(self.server_list)
-        print(self.radio_var.get())
         
 
     def initTreeView(self):
@@ -285,11 +287,12 @@ class PCaser:
         self.pcase_list.heading('CSR Name',text="CSR Name")
         #self.pcase_list.heading('Date Created',text="Date Created")
 
-        # Emable sorting
+        # Enable sorting
         for col in columns:
-            self.pcase_list.heading(col,command=lambda _col=col: self.treeview_sort_column(_col, False))
+            self.pcase_list.heading(col,command=lambda _col=col: self.treeview_sort_column(_col, False,self.pcase_list))
 
         self.pcase_list.grid(row=0,column=0)
+
 
 
         # Define archive tab contents
@@ -305,11 +308,12 @@ class PCaser:
         self.archive_list.heading('CSR Name',text="CSR Name")
         #self.pcase_list.heading('Date Created',text="Date Created")
 
-        # Emable sorting
+        # Enable sorting
         for col in columns:
-            self.archive_list.heading(col,command=lambda _col=col: self.treeview_sort_column(_col, False))
+            self.archive_list.heading(col,command=lambda _col=col: self.treeview_sort_column(_col, False,self.archive_list))
 
         self.archive_list.grid(row=0,column=0)
+        
 
         # Add function buttons
         self.update_button = ttk.Button(self.pcase_list_frame2,text='Update',width=10,command=self.editWindow)
@@ -321,7 +325,106 @@ class PCaser:
         self.new_button.grid(row=1,column=0,padx=1)
         self.update_button.grid(row=1,column=1,padx=1)
         self.archive_button.grid(row=1,column=2,padx=1,pady=2)
+        
 
+    def initQuickButtons(self):
+
+        self.quick_button_frame.grid_propagate(True)
+
+        self.pcase_button = ttk.Button(self.quick_button_frame,text="PCase",width=13,command=lambda: self.openDir("Z:\\IT Documents\\QA\\" + self.getPCaseString()))
+        self.srd_button = ttk.Button(self.quick_button_frame,text="SRD",width=13,command=lambda: self.openWebsite(self.json_data[self.getPCaseString()]['srd_link']))
+        self.ftp_root_button = ttk.Button(self.quick_button_frame,text="FTP Root",width=13,command=lambda: self.openDir("\\\\ssnj-netapp01\\imtest\\imstage01\\ftproot\\"+self.getCustString() ))
+        self.sf_button = ttk.Button(self.quick_button_frame,text="SalesForce",width=13,command=lambda: self.openWebsite(self.json_data[self.getPCaseString()]['sf_link']))
+
+        self.pcase_button.grid(row=0,column=0,sticky="E",padx=5)
+        self.srd_button.grid(row=0,column=3,sticky="E",padx=5)
+        self.sf_button.grid(row=0,column=2,sticky="E",padx=5)
+        self.ftp_root_button.grid(row=0,column=1,sticky="E",padx=5)
+
+
+    def initInfoFrame(self):
+        # Initialize Info Section contents
+        self.info_frame = self.info_area_frame
+
+        self.pcase_info = ttk.Label(self.info_frame,text="By Using The File Menu",width=23)
+        self.cust_info = ttk.Label(self.info_frame,text="File > New ",width=23)
+        self.sf_info = ttk.Label(self.info_frame,text="",width=23)
+        self.desc_info = ttk.Label(self.info_frame,text="",font=("Arial",10,"bold"),width=51)
+
+        self.last_mod_info = ttk.Label(self.info_frame,text="",width=20)
+        self.owner_info = ttk.Label(self.info_frame,text="",width=20)
+        self.case_owner_info = ttk.Label(self.info_frame,text="",width=20)
+
+        self.last_mod_label = ttk.Label(self.info_frame,text="Last Modified: ",width=15)
+        self.owner_label = ttk.Label(self.info_frame,text="Current Owner: ",width=15)
+        self.case_owner_label = ttk.Label(self.info_frame,text="Case Owner: ",width=15)
+
+        self.refresh_button = ttk.Button(self.info_frame,text="↻",width="3",command=self.refreshSFInfo)
+
+
+
+        # Define Grid for Info Section Items
+        self.desc_info.grid(row=0,column=0,columnspan=3,padx=5,sticky="W")
+        self.pcase_info.grid(row=1,column=0,padx=5,sticky="W")
+        self.cust_info.grid(row=3,column=0,padx=5,sticky="W")
+        self.sf_info.grid(row=2,column=0,padx=5,sticky="W")
+
+        self.last_mod_label.grid(row=1,column=1,padx=5,sticky="E")
+        self.owner_label.grid(row=2,column=1,padx=5,sticky="E")
+        self.case_owner_label.grid(row=3,column=1,padx=5,sticky="E")
+
+        self.last_mod_info.grid(row=1,column=2,padx=5,sticky="E")
+        self.owner_info.grid(row=2,column=2,padx=5,sticky="E")
+        self.case_owner_info.grid(row=3,column=2,padx=5,sticky="E")
+
+        self.refresh_button.grid(row=0,column=2,sticky="E",padx=5)
+
+
+    def initMenuBar(self):
+        # Initialize Menu Bar and Menu Items
+        self.menu_bar = tk.Menu(self.mainwindow)
+        self.toplevel.config(menu=self.menu_bar)
+        self.menu_item_1 = tk.Menu(self.menu_bar,tearoff=False)
+        self.menu_item_2 = tk.Menu(self.menu_bar,tearoff=False)
+        self.menu_item_3 = tk.Menu(self.menu_bar,tearoff=False)
+        self.menu_item_4 = tk.Menu(self.menu_bar,tearoff=False)
+
+        self.toplevel.bind_all("<Control-n>",self.newWindowWrapper)
+        self.toplevel.bind_all("<Control-q>",self.killWindowWrapper)
+
+        # Add 1 - File Menu Subitems
+        self.menu_item_1.add_command(label="New",accelerator="Ctrl+N",command=self.newWindow)
+        self.menu_item_1.add_separator()
+        self.menu_item_1.add_command(label="Quit",accelerator="Ctrl+Q",command=self.kill_window)
+
+        # Add 2- Edit Menu Subitems
+        self.menu_item_2.add_command(label="Change PCase Details",command=self.editWindow)
+        self.menu_item_2.add_command(label="Preferences")
+
+        # Add 3- Tools Menu Subitems
+        self.menu_item_3.add_command(label="Open Parseamajig",command=lambda: self.openApplication("Z:\\AST\\Utilities\\Parseamajig\\Parseamajig.exe"))
+        self.menu_item_3.add_command(label="Open XMLGenerator",command=lambda: self.openApplication("Z:\\AST\\Utilities\\XMLGenerator\\XmlGenerator.exe"))
+        self.menu_item_3.add_command(label="Open BillGen Wrapper",command=lambda: self.openApplication("Z:\\AST\\Utilities\\BillGen\\BillGenWrapper.exe"))
+        self.menu_item_3.add_separator()
+        self.menu_item_3.add_command(label="Run PDF Version Checker",state=tk.DISABLED)
+
+
+        # Add 4- Help Menu Subitems
+        self.menu_item_4.add_command(label="About", command=lambda:about_window.aboutWindow(self))
+        self.menu_item_4.add_command(label="Confluence Page",command=lambda: self.openWebsite("https://billtrust.atlassian.net/wiki/spaces/AT/overview"))
+        
+        # Add Menu Options to Bar
+        self.menu_bar.add_cascade(label="File", menu=self.menu_item_1)
+        self.menu_bar.add_cascade(label="Edit", menu=self.menu_item_2)
+        self.menu_bar.add_cascade(label="Tools", menu=self.menu_item_3)
+        self.menu_bar.add_cascade(label="Help", menu=self.menu_item_4)
+        
+    '''Called by tk.notebook object on pcase_tab_area when different tabs are selected. 
+     
+    Configures new, update, archive,and delete functions for buttons.
+    Determines which list to use to update PCASE info pane.
+    Enables/Disables notes tab.
+    '''
     def on_tab_change(self,event):
         tab = event.widget.tab('current')['text']
         if tab == "            Current            ":
@@ -341,9 +444,7 @@ class PCaser:
             self.tab_area.tab(1,state="disabled")
             topSelect = self.archive_list.get_children()[0]
             self.archive_list.selection_set(topSelect)
-            #self.updateInfo(self.archive_list.item(topSelect)['values'],self.archive_data)
             self.archiveSelect(self)
-
             self.threadStart()
             
     def unArchiveCase(self):
@@ -375,11 +476,7 @@ class PCaser:
         except:
            pass
         
-
-
     def archiveCase(self):
-
-
         archive_file = self.getArchiveFile()
         pcase_file = self.getDataFile()
 
@@ -434,114 +531,21 @@ class PCaser:
                 self.threadStart()
             except:
                pass
-
-
-    def treeview_sort_column(self,col, reverse):
-        l = [(self.pcase_list.set(k, col), k) for k in self.pcase_list.get_children('')]
+    '''Called by treeview instances to sort by column headers
+    '''
+    def treeview_sort_column(self,col, reverse,treeview):
+        l = [(treeview.set(k, col), k) for k in treeview.get_children('')]
         l.sort(reverse=reverse)
 
         # rearrange items in sorted positions
         for index, (val, k) in enumerate(l):
-            self.pcase_list.move(k, '', index)
+            treeview.move(k, '', index)
 
         # reverse sort next time
-        self.pcase_list.heading(col, command=lambda _col=col: self.treeview_sort_column(_col, not reverse))
+        treeview.heading(col, command=lambda _col=col: self.treeview_sort_column(_col, not reverse))
 
-    def initQuickButtons(self):
-
-        self.quick_button_frame.grid_propagate(True)
-
-        self.pcase_button = ttk.Button(self.quick_button_frame,text="PCase",width=13,command=lambda: self.openDir("Z:\\IT Documents\\QA\\" + self.getPCaseString()))
-        self.srd_button = ttk.Button(self.quick_button_frame,text="SRD",width=13,command=lambda: self.openWebsite(self.json_data[self.getPCaseString()]['srd_link']))
-        self.ftp_root_button = ttk.Button(self.quick_button_frame,text="FTP Root",width=13,command=lambda: self.openDir("\\\\ssnj-netapp01\\imtest\\imstage01\\ftproot\\"+self.getCustString() ))
-        self.sf_button = ttk.Button(self.quick_button_frame,text="SalesForce",width=13,command=lambda: self.openWebsite(self.json_data[self.getPCaseString()]['sf_link']))
-
-        self.pcase_button.grid(row=0,column=0,sticky="E",padx=5)
-        self.srd_button.grid(row=0,column=3,sticky="E",padx=5)
-        self.sf_button.grid(row=0,column=2,sticky="E",padx=5)
-        self.ftp_root_button.grid(row=0,column=1,sticky="E",padx=5)
-
-
-    def initInfoFrame(self):
-        # Initialize Info Section contents
-        self.info_frame = self.info_area_frame
-
-        self.pcase_info = ttk.Label(self.info_frame,text="By Using The File Menu",width=23)#font=("Arial",10,"bold"),width=20)
-        self.cust_info = ttk.Label(self.info_frame,text="File > New ",width=23)#font=("Arial",10,"bold"),width=20)
-        self.sf_info = ttk.Label(self.info_frame,text="",width=23)#font=("Arial",10,"bold"),width=20)
-        self.desc_info = ttk.Label(self.info_frame,text="",font=("Arial",10,"bold"),width=51)
-
-        self.last_mod_info = ttk.Label(self.info_frame,text="",width=20)
-        self.owner_info = ttk.Label(self.info_frame,text="",width=20)
-        self.case_owner_info = ttk.Label(self.info_frame,text="",width=20)
-
-        self.last_mod_label = ttk.Label(self.info_frame,text="Last Modified: ",width=15)
-        self.owner_label = ttk.Label(self.info_frame,text="Current Owner: ",width=15)
-        self.case_owner_label = ttk.Label(self.info_frame,text="Case Owner: ",width=15)
-
-        self.refresh_button = ttk.Button(self.info_frame,text="↻",width="3",command=self.refreshSFInfo)
-
-
-
-        # Define Grid for Info Section Items
-        self.desc_info.grid(row=0,column=0,columnspan=3,padx=5,sticky="W")
-        self.pcase_info.grid(row=1,column=0,padx=5,sticky="W")
-        self.cust_info.grid(row=3,column=0,padx=5,sticky="W")
-        self.sf_info.grid(row=2,column=0,padx=5,sticky="W")
-
-        self.last_mod_label.grid(row=1,column=1,padx=5,sticky="E")
-        self.owner_label.grid(row=2,column=1,padx=5,sticky="E")
-        self.case_owner_label.grid(row=3,column=1,padx=5,sticky="E")
-
-        self.last_mod_info.grid(row=1,column=2,padx=5,sticky="E")
-        self.owner_info.grid(row=2,column=2,padx=5,sticky="E")
-        self.case_owner_info.grid(row=3,column=2,padx=5,sticky="E")
-
-        self.refresh_button.grid(row=0,column=2,sticky="E",padx=5)
-
-
-
-
-    def initMenuBar(self):
-        # Initialize Menu Bar and Menu Items
-        self.menu_bar = tk.Menu(self.mainwindow)
-        self.toplevel.config(menu=self.menu_bar)
-        self.menu_item_1 = tk.Menu(self.menu_bar,tearoff=False)
-        self.menu_item_2 = tk.Menu(self.menu_bar,tearoff=False)
-        self.menu_item_3 = tk.Menu(self.menu_bar,tearoff=False)
-        self.menu_item_4 = tk.Menu(self.menu_bar,tearoff=False)
-
-        self.toplevel.bind_all("<Control-n>",self.newWindowWrapper)
-        self.toplevel.bind_all("<Control-q>",self.killWindowWrapper)
-
-        # Add 1 - File Menu Subitems
-        self.menu_item_1.add_command(label="New",accelerator="Ctrl+N",command=self.newWindow)
-        self.menu_item_1.add_separator()
-        self.menu_item_1.add_command(label="Quit",accelerator="Ctrl+Q",command=self.kill_window)
-
-        # Add 2- Edit Menu Subitems
-        self.menu_item_2.add_command(label="Change PCase Details",command=self.editWindow)
-        self.menu_item_2.add_command(label="Preferences")
-
-        # Add 3- Tools Menu Subitems
-        self.menu_item_3.add_command(label="Open Parseamajig",command=lambda: self.openApplication("Z:\\AST\\Utilities\\Parseamajig\\Parseamajig.exe"))
-        self.menu_item_3.add_command(label="Open XMLGenerator",command=lambda: self.openApplication("Z:\\AST\\Utilities\\XMLGenerator\\XmlGenerator.exe"))
-        self.menu_item_3.add_command(label="Open BillGen Wrapper",command=lambda: self.openApplication("Z:\\AST\\Utilities\\BillGen\\BillGenWrapper.exe"))
-        self.menu_item_3.add_separator()
-        self.menu_item_3.add_command(label="Run PDF Version Checker",state=tk.DISABLED)
-
-
-        # Add 4- Help Menu Subitems
-        self.menu_item_4.add_command(label="About", command=lambda:about_window.aboutWindow(self))
-        self.menu_item_4.add_command(label="Confluence Page",command=lambda: self.openWebsite("https://billtrust.atlassian.net/wiki/spaces/AT/overview"))
-        
-        # Add Menu Options to Bar
-        self.menu_bar.add_cascade(label="File", menu=self.menu_item_1)
-        self.menu_bar.add_cascade(label="Edit", menu=self.menu_item_2)
-        self.menu_bar.add_cascade(label="Tools", menu=self.menu_item_3)
-        self.menu_bar.add_cascade(label="Help", menu=self.menu_item_4)
-
-
+    '''Initializes thread to watch FTP root for file changes
+    '''
     def threadStart(self):
         self.server = "\\\\ssnj-netapp01\\imtest\\imstage01\\ftproot\\"+self.getCustString() 
         self.saved_contents = []
@@ -549,14 +553,19 @@ class PCaser:
         thread = threading.Thread(target=watch_dog.watchDog, args=[self,self.server])
         self.ftpListUpdate()
         thread.start()
-
+        
+    '''Helper method for threadStart
+    '''
     def keepWatching(self):
         return self.watching
-
+    
+    '''Helper method for threadStart
+    '''
     def setWatch(self,boolWatch):
         self.watching = boolWatch
 
-
+    '''Handles updating UI listbox with FTP root contents
+    '''
     def ftpListUpdate(self):
         current_contents = [f for f in os.listdir(self.server) if os.path.isfile(os.path.join(self.server, f))]
         self.ftpList.delete(0,self.ftpList.size())
@@ -570,7 +579,11 @@ class PCaser:
 
     def killWindowWrapper(self,parent):
         self.kill_window()
-
+        
+    '''Called by the treeview when a new selection is made.
+    
+    Saves PCase data to json, disables ftp root watchdog, calls updateInfo
+    '''
     def onselect(self,parent):
         self.savePCase()
         self.setWatch(False)
@@ -579,7 +592,11 @@ class PCaser:
         self.notes.delete(1.0, tk.END)
         self.updateInfo(values,self.json_data)
         self.lastSelected = index
-        
+    
+    '''Called by the archive treeview when a new selection is made.
+    
+    Disables ftp root watchdog, calls updateInfo
+    '''      
     def archiveSelect(self,parent):
         self.setWatch(False)
         index = self.archive_list.selection()
@@ -589,6 +606,12 @@ class PCaser:
         self.lastSelected = index
 
 
+    '''Updates the PCase Info area, quick view, edit/push, and notes
+    
+    PARAMS:
+        values - a 1x2 list containing the pcase and the customer name
+        data - either json_data or archive_data, the json with case data in memory
+    '''
     def updateInfo(self,values,data):
 
         pcase = values[0]
@@ -617,7 +640,6 @@ class PCaser:
         self.notes.insert(tk.END,notes)
         self.notehash = hash(self.notes.get("1.0","end"))
 
-
     def savePCase(self):
         data_folder = self.getDataFolder()
         data_file = self.getDataFile()
@@ -640,7 +662,8 @@ class PCaser:
 
             self.saveJSON(data_file,data)
             
-
+    '''Loads JSON file into memory if not already done, updates pcase_list treeview
+    '''
     def loadPCases(self):
         data_file = self.getDataFile()
 
@@ -658,7 +681,9 @@ class PCaser:
                 data = self.json_data
                 for case in data:
                     self.pcase_list.insert('','end',iid=[data[case]['pcase']],values=[data[case]['pcase'],data[case]['cust_name']])
-
+    
+    '''Loads Archive JSON file into memory if not already done, updates archive_list treeview
+    '''
     def loadArchive(self):
         data_file = self.getArchiveFile()
 
@@ -685,7 +710,9 @@ class PCaser:
 
     def run(self):
         self.mainwindow.mainloop()
-
+        
+    '''Loads 'Quick View' PCase treeview
+    '''
     def pcase_tree(self):
         pcase = self.getPCaseString()
         if pcase:
@@ -716,25 +743,31 @@ class PCaser:
             self.tree.item(self.tree.focus(),open=True)
             self.open_node('')
 
-
+    '''Helper method for pcase_tree
+    '''
     def insert_node(self, parent, text, abspath):
         node = self.tree.insert(parent, 'end', text=text, open=False)
         if os.path.isdir(abspath):
             self.nodes[node] = abspath
             self.tree.insert(node, 'end')
-
+            
+    '''Helper method for pcase_tree
+    '''
     def open_node(self, event):
         node = self.tree.focus()
         abspath = self.nodes.pop(node, None)
-        print(node)
-        print(abspath)
         if abspath:
             self.tree.delete(self.tree.get_children(node))
             for p in os.listdir(abspath):
                 self.insert_node(node, p, os.path.join(abspath, p))
 
 
-
+    ''' Returns a list of the files in a given directory, optionally of a specified file type.
+    
+    PARAMS:
+        direc - the directory to list files from
+        fileType - (Optional) the file extension to exclusively return
+    '''
     def filesInDir(self, direc,fileType=""):
         if fileType != "":
             return [(i) for i in os.listdir(direc) if fileType in i]
@@ -742,26 +775,51 @@ class PCaser:
             return os.listdir(direc)
 
 
+    ''' Given a subdirectory and a filetype, open files in that directory.
+    
+    There are three possible cases for the contents of the folder:
+        -There are no files in the folder.
+            --This will open an error dialog
+        -There is one file in the folder
+            --This will open that file without further user input
+        --There are multiple files in the folder
+            --This will call the filePickerWindow class and have the user
+              choose which files to open
+    
+    PARAMS:
+        subDir - the directory to look in for file to open
+        fileType - the type of file to open
+    '''
     def editFiles(self,subDir,fileType=""):
         pcase = self.getPCaseString()
         if pcase:
             subFolder_path = "Z:\\IT Documents\\QA\\" + pcase + subDir
-            #file_path_string = filedialog.askopenfilenames(initialdir = fdt_path,filetypes = (("CSV files","*.csv"),("all files","*.*")))
             files = self.filesInDir(subFolder_path,fileType)
             if len(files) == 0:
                 tk.messagebox.showwarning('Error','No files found in directory')
             elif len(files) == 1:
                 os.startfile(subFolder_path+"\\"+files[0], 'open')
             else:
-                print(files)
                 selected_files = file_picker_window.filePickerWindow(self,subFolder_path).show()
                 if selected_files:
                     for file in selected_files:
-                        print(file)
                         os.startfile(subFolder_path+"\\"+file[1]+file[0], 'open')
-        #else:
-        #    messagebox.showwarning('Error', 'Please Enter a Valid PCASE\nBefore Trying to Open or Edit Files')
-
+                        
+    ''' Given a subdirectory and a filetype, call classes that handle file copying.
+    
+    There are three possible cases for the contents of the folder:
+        -There are no files in the folder.
+            --This will open an error dialog
+        -There is one file in the folder
+            --This will push that file without further user input
+        --There are multiple files in the folder
+            --This will call the filePickerWindow class and have the user
+              choose which files to push
+    
+    PARAMS:
+        subDir - the directory to look in for file to open
+        fileType - the type of file to open
+    '''
     def pushFiles(self,subDir,fileType=""):
         pcase = self.getPCaseString()
         if pcase:
@@ -770,18 +828,15 @@ class PCaser:
             if len(files) == 0:
                 tk.messagebox.showwarning('Error','No files found in directory')
             elif len(files) == 1 and not os.path.isdir(subFolder_path+'\\'+files[0]):
-                print(files)
                 copy_files_window.copyFilesWindow(self,subFolder_path,subDir,files)
             else:
-                print(files)
                 selected_files = file_picker_window.filePickerWindow(self,subFolder_path).show()
                 if selected_files:
                     copy_files_window.copyFilesWindow(self,subFolder_path,subDir,selected_files)
-        #else:
-        #    messagebox.showwarning('Error', 'Please Enter a Valid PCASE\nBefore Trying to Open or Edit Files')
 
+    '''Updates Salesforce pulled data in the PCase Info Area
+    '''
     def refreshSFInfo(self):
-        print('does this do anything')
         data_file = self.getDataFile()
         if not os.path.exists(data_file):
             tk.messagebox.showwarning('Error', 'You must first add your sf credentials to\nC:\\Users\\<you>\\AppData\\Roaming\\PCASR\\credentials.txt\nAn example can be found at Z:\\AST\\Utilities\\PCASR')
@@ -814,7 +869,9 @@ class PCaser:
     def saveJSON(self,file,data):
         with open(file,'w') as outfile:
             json.dump(data,outfile)
-
+            
+    #Some Helpful mutator and accessor methods:
+    
     def setDataFolder(self,folder):
         self.data_folder = folder
     def getDataFolder(self):
@@ -836,6 +893,8 @@ class PCaser:
         self.cust = cust
     def getCustString(self):
         return self.cust     
+    
+    # Wrapper methods for each push/edit button
 
     def editTemplates(self):
         self.editFiles("\\FDT",".csv")
@@ -862,7 +921,6 @@ class PCaser:
 
     def openDir(self,path):
         expString = "explorer " + path
-        print(expString)
         subprocess.Popen(expString)     
 
     def openSRD(self):

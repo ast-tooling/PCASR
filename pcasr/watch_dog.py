@@ -2,6 +2,9 @@ import time
 from watchdog.observers import Observer
 from watchdog.events import PatternMatchingEventHandler
 
+'''
+Handles watching and notifying of changes on a given path
+'''
 class watchDog:
 
     def __init__(self,parent,path):
