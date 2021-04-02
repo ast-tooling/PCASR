@@ -7,6 +7,7 @@ import threading
 import json
 from simple_salesforce import Salesforce
 import configparser
+from subprocess import call
 
 # local imports
 import save_dialog_window
@@ -60,15 +61,11 @@ class PCaser:
         self.initQuickButtons()
         self.initFTPFrame()
         self.initTabArea()
-
         self.initTreeView()
-
-
 
         # Populate the ListBox with PCases
         self.loadPCases()
         self.loadArchive()
-
 
         self.watching = False
         # Select the first listbox item if there is one
@@ -250,15 +247,6 @@ class PCaser:
         self.radio3.invoke()
 
 
-
-
-    def setServerList(self):
-        if self.radio_var.get() == 2:
-            self.server_list = self.all_servers
-        elif self.radio_var.get() == 1:
-            self.server_list = self.all_servers[-2:]
-        else:
-            self.server_list = self.all_servers[:4] 
         
 
     def initTreeView(self):
@@ -406,7 +394,7 @@ class PCaser:
         self.menu_item_3.add_command(label="Open XMLGenerator",command=lambda: self.openApplication("Z:\\AST\\Utilities\\XMLGenerator\\XmlGenerator.exe"))
         self.menu_item_3.add_command(label="Open BillGen Wrapper",command=lambda: self.openApplication("Z:\\AST\\Utilities\\BillGen\\BillGenWrapper.exe"))
         self.menu_item_3.add_separator()
-        self.menu_item_3.add_command(label="Run PDF Version Checker",state=tk.DISABLED)
+        self.menu_item_3.add_command(label="Run PDF Version Checker")#,command=lambda: self.openViaPython("Z:\\AST\\Utilities\\MassPDFVersionCheck\\check_pdfs.py"))
 
 
         # Add 4- Help Menu Subitems
@@ -418,6 +406,15 @@ class PCaser:
         self.menu_bar.add_cascade(label="Edit", menu=self.menu_item_2)
         self.menu_bar.add_cascade(label="Tools", menu=self.menu_item_3)
         self.menu_bar.add_cascade(label="Help", menu=self.menu_item_4)
+        
+    
+    def setServerList(self):
+        if self.radio_var.get() == 2:
+            self.server_list = self.all_servers
+        elif self.radio_var.get() == 1:
+            self.server_list = self.all_servers[-2:]
+        else:
+            self.server_list = self.all_servers[:4] 
         
     '''Called by tk.notebook object on pcase_tab_area when different tabs are selected. 
      
@@ -431,6 +428,8 @@ class PCaser:
             self.archive_button.config(text='Archive')
             self.archive_button.config(command=self.archiveCase)
             self.tab_area.tab(1,state="normal")
+            self.new_button.config(text='New')
+            self.new_button.config(command=self.newWindow)
             topSelect = self.pcase_list.get_children()[0]
             self.pcase_list.selection_set(topSelect)
             self.onselect(self)
@@ -468,9 +467,9 @@ class PCaser:
         self.loadArchive()
 
         try:
-            topSelect = self.pcase_list.get_children()[0]
-            self.pcase_list.selection_set(topSelect)
-            self.updateInfo(self.pcase_list.item(topSelect)['values'],self.json_data)
+            topSelect = self.archive_list.get_children()[0]
+            self.archive_list.selection_set(topSelect)
+            self.updateInfo(self.archive_list.item(topSelect)['values'],self.json_data)
 
             self.threadStart()
         except:
@@ -531,8 +530,7 @@ class PCaser:
                 self.threadStart()
             except:
                pass
-    '''Called by treeview instances to sort by column headers
-    '''
+           
     def treeview_sort_column(self,col, reverse,treeview):
         l = [(treeview.set(k, col), k) for k in treeview.get_children('')]
         l.sort(reverse=reverse)
@@ -943,7 +941,12 @@ class PCaser:
         else:
             tk.messagebox.showwarning('Error', 'There is no SRD saved for this case.\nYou can add via Edit > Change PCase Details') 
         
-
+    def openViaPython(self,file):
+        try:
+            call(["python", file])
+        except:
+            tk.messagebox.showinfo('You need python installed and in your path file to open this.')
+    
 if __name__ == '__main__':
     app = PCaser()
     app.run()
