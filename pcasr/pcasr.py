@@ -336,6 +336,8 @@ class PCaser:
             self.savePCase()
             self.archive_button.config(text='UnArchive')
             self.archive_button.config(command=self.unArchiveCase)
+            self.new_button.config(text='Delete')
+            self.new_button.config(command=self.deleteCase)
             self.tab_area.tab(1,state="disabled")
             topSelect = self.archive_list.get_children()[0]
             self.archive_list.selection_set(topSelect)
@@ -380,20 +382,6 @@ class PCaser:
 
     def archiveCase(self):
 
-        """
-        TODO: 
-        -Create mutator and accessor methods for
-            x-data folder
-            x-data file 
-            x-archive file
-            x-current selection
-                x-pcase, etc
-        x-Replace all updates and retrievals with new methods
-        x-finish archiveCase method
-        
-        -finish unArchive method
-        -update updateInfo so it works with archive list
-        """
 
         archive_file = self.getArchiveFile()
         pcase_file = self.getDataFile()
@@ -431,6 +419,28 @@ class PCaser:
             self.threadStart()
         except:
            pass
+       
+    def deleteCase(self):
+        
+        confirmDialog = tk.messagebox.askquestion('Delete PCase?','Are you sure you want to remove this PCase?',icon='warning')
+        if confirmDialog == 'yes':
+            archive_file = self.getArchiveFile()
+            pcase = self.getPCaseString()
+            del self.archive_data[pcase]
+            
+            with open(archive_file,'w') as outfile:
+                json.dump(self.archive_data,outfile)
+                
+            self.loadArchive()
+
+            try:
+                topSelect = self.pcase_list.get_children()[0]
+                self.pcase_list.selection_set(topSelect)
+                self.updateInfo(self.pcase_list.item(topSelect)['values'],self.json_data)
+    
+                self.threadStart()
+            except:
+               pass
 
 
     def treeview_sort_column(self,col, reverse):
