@@ -359,11 +359,8 @@ class PCaser:
         self.json_data[pcase] = self.archive_data[pcase]
         del self.archive_data[pcase]
 
-        with open(pcase_file,'w') as outfile:
-            json.dump(self.json_data,outfile)
-
-        with open(archive_file,'w') as outfile:
-            json.dump(self.archive_data,outfile)
+        self.saveJSON(pcase_file,self.json_data)
+        self.saveJSON(archive_file,self.archive_data)
 
 
         self.loadPCases()
@@ -391,8 +388,7 @@ class PCaser:
         if not os.path.exists(archive_file):
             data = {} 
             # Initialize Data File
-            with open(archive_file,'w') as outfile:
-                json.dump(data,outfile)
+            self.saveJSON(archive_file,{})
 
         with open(archive_file) as json_file:
             data = json.load(json_file)
@@ -401,11 +397,9 @@ class PCaser:
         self.archive_data[pcase] = self.json_data[pcase]
         del self.json_data[pcase]
 
-        with open(pcase_file,'w') as outfile:
-            json.dump(self.json_data,outfile)
+        self.saveJSON(pcase_file,self.json_data)
 
-        with open(archive_file,'w') as outfile:
-            json.dump(self.archive_data,outfile)
+        self.saveJSON(archive_file,self.archive_data)
 
 
         self.loadPCases()
@@ -428,8 +422,7 @@ class PCaser:
             pcase = self.getPCaseString()
             del self.archive_data[pcase]
             
-            with open(archive_file,'w') as outfile:
-                json.dump(self.archive_data,outfile)
+            self.saveJSON(archive_file,self.archive_data)
                 
             self.loadArchive()
 
@@ -645,8 +638,7 @@ class PCaser:
                 data[pcase].update({'notes':notes.rstrip()})
                 self.notehash = hash(notes)
 
-            with open(data_file,'w') as outfile:
-                json.dump(data,outfile)
+            self.saveJSON(data_file,data)
             
 
     def loadPCases(self):
@@ -817,7 +809,11 @@ class PCaser:
                 index = self.pcase_list.selection()
                 values= self.pcase_list.item(index)['values']
                 self.updateInfo(values,self.json_data)
-
+                
+                
+    def saveJSON(self,file,data):
+        with open(file,'w') as outfile:
+            json.dump(data,outfile)
 
     def setDataFolder(self,folder):
         self.data_folder = folder
