@@ -152,7 +152,7 @@ class PCaser:
         self.tab_area.add(self.tab_1,text="Quick View")
         self.tab_area.add(self.tab_2,text="Notes")
         self.tab_area.add(self.tab_3,text="Edit/Push")
-        self.tab_area.add(self.tab_4,text="Tab 4")
+        self.tab_area.add(self.tab_4,text="Conflicts")
         self.tab_area.pack(expand=1,fill="both")
 
 
@@ -246,6 +246,10 @@ class PCaser:
         self.radio3.grid(row=2,column=0,sticky='w',padx=10)
         self.radio3.invoke()
 
+        # Tab 4 - Conflicts
+        
+        self.conflict_treeview = ttk.Treeview(self.tab_4,height=32)
+        self.conflict_treeview.pack()
 
         
 
