@@ -26,7 +26,8 @@ def find_OpenCases(csr_name, current_pcase):
 
         matchOnCsr = case['CSRUSERNAME']
         matchOnPCase = case['PCASENUMBER']
-        if current_case == matchOnCsr and current_pcase != matchOnPCase: # Need pcase Number for if Condition to compare.
+        rollStatus = case['ROLLSTATUS']
+        if current_case == matchOnCsr and current_pcase != matchOnPCase and rollStatus != "Rolled": # Need pcase Number for if Condition to compare.
             matches += 1
             #print("-----------Start Case %s Details----------------"%(matches))
             
@@ -158,7 +159,7 @@ def find_OpenCases(csr_name, current_pcase):
 
                 #print("-----------End Case %s Details----------------"%(matches))
 
-            finalTrewViewDict = {sfCaseNumber:[pcaseNumber,caseReason,whoHasCase,rollyet, caseStatus, pcasePath, templateList, imagesList, termsBackerList, pythonScriptList,parserFileList]}#,[fdtMiscList,scriptMiscList,parserMiscList,releaseBinMiscList]]}
+            finalTrewViewDict = {pcaseNumber:[pcaseNumber,caseReason,whoHasCase,rollyet, caseStatus, pcasePath, templateList, imagesList, termsBackerList, pythonScriptList,parserFileList]}#,[fdtMiscList,scriptMiscList,parserMiscList,releaseBinMiscList]]}
             finalTreeViewList.append(finalTrewViewDict)
 
     if int(matches) == 0:

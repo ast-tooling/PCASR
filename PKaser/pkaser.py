@@ -1,3 +1,4 @@
+from json.decoder import JSONDecodeError
 import tkinter as tk
 import subprocess
 from tkinter import ttk
@@ -14,6 +15,7 @@ from tkinter import messagebox
 import time
 import datetime
 import dateutil.relativedelta
+import keyring
 
 # Called Imports for PKase Notes Code merge.
 from tkinter import *
@@ -71,8 +73,8 @@ class PCaser:
         self.__firstStartUp = True
         
         user = os.getlogin()
-        data_folder = r"C:\\Users\\%s\\AppData\\Roaming\\PCaser" %user
-        data_file = data_folder+"\\nt-json-files\\pcasr.json"
+        data_folder = r"C:\\Users\\%s\\AppData\\Roaming\\PKaser" %user
+        data_file = data_folder+"\\nt-json-files\pkaser.json"
         archive_file = data_folder+"\\nt-json-files\\archive.json"
         appIcon_file = data_folder+"\\images\\billTrustIcon.png"
         branding_image_file = data_folder+"\\images\\inapp-brand-image.png"
@@ -114,11 +116,14 @@ class PCaser:
         self.initCodeConflictFrame()
         self.initNotePadFrame()
         self.initNotePadTextArea()
-        #self.initBrandingFrame()
+        self.initBrandingFrame()
 
         # Populate the ListBox with PCases
-        self.loadPCases()
-        self.loadArchive()
+        try:
+            self.loadPCases()
+            self.loadArchive()
+        except JSONDecodeError:
+            pass
 
         self.watching = False
         # Select the first listbox item if there is one
@@ -126,16 +131,17 @@ class PCaser:
             with open(self.getLastSelectedFile()) as f:
                 index = int(f.readline())
             topSelect = topSelect = self.pcase_list.get_children()[index]
-
             self.pcase_list.selection_set(topSelect)
             self.updateInfo(self.pcase_list.item(topSelect)['values'],self.json_data)
             self.threadStart()
         except IndexError:
-            topSelect = topSelect = self.pcase_list.get_children()[0]
-
-            self.pcase_list.selection_set(topSelect)
-            self.updateInfo(self.pcase_list.item(topSelect)['values'],self.json_data)
-            self.threadStart()
+            try:
+                topSelect = topSelect = self.pcase_list.get_children()[0]
+                self.pcase_list.selection_set(topSelect)
+                self.updateInfo(self.pcase_list.item(topSelect)['values'],self.json_data)
+                self.threadStart()
+            except IndexError:
+                pass
 
 
         # Tell the window manager to give focus back after the X button is hit
@@ -187,6 +193,7 @@ class PCaser:
         self.toplevel = self.mainwindow.winfo_toplevel()
         self.userlabel = "Billtrust Team Member - %s"%(os.getlogin())
         self.notepad_frame_label = "%s - PCase ♫'s"%(os.getlogin())
+        
 
         # Creation of the FRAMES
         self.main_frame = ttk.Labelframe(self.mainwindow, text=str(self.userlabel),labelanchor="n")
@@ -198,7 +205,7 @@ class PCaser:
         self.code_conflict_frame = ttk.Labelframe(self.main_frame)
         self.tab_frame = ttk.Frame(self.main_frame)
         self.notepad_frame = ttk.LabelFrame(self.main_frame,text=str(self.notepad_frame_label),labelanchor="n")
-        self.branding_frame = ttk.LabelFrame(self.main_frame, text="Branding Goes Here")
+        self.branding_frame = ttk.Label(self.main_frame)
 
 
         # Placement of Frames in main_frame
@@ -213,7 +220,7 @@ class PCaser:
         self.code_conflict_frame.place(x=1, y=435)
         self.notepad_frame.place(width=800,height=616,x=427, y=105)
         self.main_frame.pack(expand=True, fill=tk.BOTH)
-        self.branding_frame.place(x=1, y=650)
+        self.branding_frame.place(x=3, y=680)
         
     def initBrandingFrame(self):
         self.brand_frame = self.branding_frame
@@ -221,9 +228,8 @@ class PCaser:
         loadImage = Image.open(self.getBrandingImage())
         print(loadImage)
         renderImage = ImageTk.PhotoImage(loadImage)
-        print(renderImage)
-        print("Branfing Frame Ran")
-        self.branding_image = tk.Label(self.brand_frame, image=renderImage)
+        print("initBrandingFrame(self)")
+        self.branding_image = TkinterCustomButton(master=self.brand_frame,bg_color="#ffffcc",border_width=5,fg_color="#003035",corner_radius=0,text_color="white",hover_color="#aadb1e",width=416,height=53,image=renderImage ,command=lambda: self.openWebsite("https://billtrust.kazoohr.com/dashboard"))
         self.branding_image.pack()
 
     def initTabArea(self):
@@ -451,8 +457,8 @@ class PCaser:
         # Initialize Info Section contents
         self.info_frame = self.info_area_frame
 
-        self.pcase_info = ttk.Label(self.info_frame,text="By Using The File Menu",width=23)
-        self.cust_info = ttk.Label(self.info_frame,text="File > New ",width=23)
+        self.pcase_info = ttk.Label(self.info_frame,text="Welcome to The PKaser",width=23)
+        self.cust_info = ttk.Label(self.info_frame,text="Click PCase > New to Add",width=23)
         self.sf_info = ttk.Label(self.info_frame,text="",width=23)
         self.desc_info = ttk.Label(self.info_frame,text="",font=("Arial",9,"bold"),width=51,wraplength=300, justify="left")
 
@@ -518,6 +524,11 @@ class PCaser:
         #self.file_menu.add_command(label="AutoSave - Test", command=self.__autoOpen__)
 
         # Add subitems for Edit Option
+        data_folder = self.getDataFolder()
+        user = os.getlogin()
+        print("Here is the data folder" +data_folder)
+        self.edit_menu.add_command(label="PCase ♫'s Directory",command=lambda: self.openDir("C:\\Users\\%s\\AppData\\Roaming\\PKaser\\pcasenotes" %user))
+        self.edit_menu.add_separator()
         self.edit_menu.add_command(label="Cut",accelerator="Ctrl+X", command=self.__cut__)
         self.edit_menu.add_command(label="Copy", accelerator="Ctrl+C",command=self.__copy2__)
         self.edit_menu.add_command(label="Paste", accelerator="Ctrl+V",command=self.__paste__)
@@ -526,6 +537,7 @@ class PCaser:
         # Add subitems for Tools Option
         self.tool_menu.add_command(label="Timestamp", command=self.__regularNoteStamp__)
         self.tool_menu.add_command(label="SF Comment", command=self.__salesforceComment__)
+        self.tool_menu.add_command(label="Case Commit", command=self.__CaseCommittedNoteStamp__)
         self.tool_menu.add_separator()
         self.tool_menu.add_command(label="Start Timer", command=self.__caseStartTime__)
         self.tool_menu.add_command(label="End Timer", command=self.__caseEndTime__)
@@ -681,15 +693,19 @@ class PCaser:
                 archivedYet = tk.messagebox.showwarning('Is It Archived?','You are not able to delete a current case.')
 
             
-            self.saveJSON(archive_file,self.archive_data)
-                
+            self.saveJSON(archive_file,self.archive_data)     
             self.loadArchive()
+            previousFileName = "%s_%s.txt"%(self.getPCaseString(),self.getCustString())
+            previousTextArea = self.text_area.get("1.0",END)
+            index = self.pcase_list.selection()
+            values= self.pcase_list.item(index)['values']
+            self.__saveOnSelect__(previousFileName,previousTextArea)
 
             try:
                 topSelect = self.pcase_list.get_children()[0]
                 self.pcase_list.selection_set(topSelect)
                 self.updateInfo(self.pcase_list.item(topSelect)['values'],self.json_data)
-    
+                self.__openOnSelect__()
                 self.threadStart()
             except:
                 pass
@@ -716,8 +732,10 @@ class PCaser:
             self.ftpListUpdate()
         except FileNotFoundError:
             tk.messagebox.showwarning('Warning','Issues accessing local resources.\nFunctionality will be limited.')
+            self.setPCaseString()
             self.ftpListUpdate()
             self.pcase_tree()
+            
 
         thread.start()
         
@@ -882,6 +900,7 @@ class PCaser:
                 with open(data_file) as json_file:
                     data = json.load(json_file)
                     self.json_data = data
+ 
                     if 'notes' in data.keys():
                         self.notes_hash = hash(data['notes'])
                     for case in data:
@@ -949,6 +968,7 @@ class PCaser:
             
 
             abspath = "Z:\\IT Documents\\QA\\" + pcase
+            print("Here is the path:" + abspath)
             self.insert_node('', abspath, abspath)
             self.tree.bind('<<TreeviewOpen>>', self.open_node)
 
@@ -972,6 +992,7 @@ class PCaser:
         if abspath:
             self.tree.delete(self.tree.get_children(node))
             for p in os.listdir(abspath):
+                print("%s is a directory in: %s"%(p, abspath))
                 self.insert_node(node, p, os.path.join(abspath, p))
 
     ''' Returns a list of the files in a given directory, optionally of a specified file type.
@@ -1051,20 +1072,21 @@ class PCaser:
     def refreshSFInfo(self):
         config_file = self.getConfigFile()
         if not os.path.exists(config_file):
-            tk.messagebox.showwarning('Error', 'You must first add your sf credentials to\nC:\\Users\\<you>\\AppData\\Roaming\\PCASR\\credentials.txt\nAn example can be found at Z:\\AST\\Utilities\\PCASR')
+            tk.messagebox.showwarning('Error', 'You must first add your sf credentials to\nC:\\Users\\<you>\\AppData\\Roaming\\PKaser\\credentials.txt\nAn example can be found at Z:\\AST\\Utilities\\PKaser')
 
         else:
             config = configparser.ConfigParser()
             config.read(config_file)
+            username = config.get('credentials','username')
 
             client = Salesforce(
-                username=config.get('credentials','username'),
-                password=config.get('credentials','password'),
-                security_token=config.get('credentials','security_token')
+                username= username,
+                password=keyring.get_password("pkaser-userinfo", username),
+                security_token=keyring.get_password("pkaser-token", username)
                 )
 
             pcase = self.getPCaseString()
-            if pcase != 'By Using The File Menu':
+            if pcase != 'Welcome to The PKaser':
                 case_id = self.json_data[pcase]['sf_link'].split('/')[-1]
 
                 case_info = client.Case.get(case_id)
@@ -1085,6 +1107,7 @@ class PCaser:
     
     def code_conflict_tree(self):
         self.conflicts = find_OpenCases(self.getCustString(), self.getPCaseString())
+        print(self.conflicts)
         conflicts = self.conflicts
         # Define Tree
         self.conflictTree = ttk.Treeview(self.code_conflict_frame)
@@ -1100,7 +1123,6 @@ class PCaser:
         # Add Data
         rowCount = 1
         for iConflict in conflicts:
-            #print(iConflict)
             for pcaseNumber in iConflict:
                 if pcaseNumber == "NOCONFLICTS":
                     captureRowCount = rowCount
@@ -1215,7 +1237,7 @@ class PCaser:
         self.appIcon_file = file  
     def getAppIconFile(self):
         return self.appIcon_file
-    
+
     def setBrandingImage(self, file):
         self.branding_image_file = file
     def getBrandingImage(self):
@@ -1284,7 +1306,11 @@ class PCaser:
     def pushParsers(self):
         self.pushFiles("\\VC\\ParserConfigs",".xml")
     def pushScripts(self):
-        self.pushFiles("\\VC\\Scripts",".py")
+        try:
+            self.pushFiles("\\VC\\Scripts",".py")
+        except FileNotFoundError:
+            self.pushFiles("\\VC\\SCRIPTS",".py")
+
     def pushSamples(self):
         try:
             self.pushFiles("\\SAMPLE_DATA")
@@ -1381,6 +1407,14 @@ class PKaseNotesFuctions(PCaser):
         self.text_area.insert(INSERT, self.timestamp)
         self.text_area.configure(state="normal")
 
+    def __CaseCommittedNoteStamp__(self):
+        self.user = os.getlogin()
+        self.today = datetime.datetime.now().date()
+        self.timestamp = "%s_%s\nCase Commited.\n-----------------------------------------------------------------------------------------------\n"%(self.user,self.today)
+        self.text_area.mark_set("insert",1.0)
+        self.text_area.insert(INSERT, self.timestamp)
+        self.text_area.configure(state="normal")
+
     def __newFile__(self):
         #self.root.title("Untitled - Notepad")
         self.fileCheck = self.text_area.get("1.0",END)
@@ -1446,7 +1480,7 @@ class PKaseNotesFuctions(PCaser):
             self.__file__ = None
             self.user = os.getlogin()
             self.today = datetime.datetime.now().date()
-            self.timestamp = "%s_%s\n-----------------------------------------------------------------------------------------------\n"%(self.user,self.today)
+            self.timestamp = "%s_%s\nCase picked up.\n-----------------------------------------------------------------------------------------------\n"%(self.user,self.today)
             self.text_area.delete(1.0, END)
             self.text_area.insert(INSERT, self.timestamp)
             self.text_area.configure(state="normal")
@@ -1517,6 +1551,7 @@ class PKaseNotesFuctions(PCaser):
 def main():
     PKaseNotes = PKaseNotesFuctions()
     PKaseNotes.run()
+
     
 if __name__ == '__main__':
     main()

@@ -2,22 +2,24 @@ from simple_salesforce import Salesforce, SalesforceLogin
 import json
 import os
 import configparser
+import keyring
 
 def get_SalesForceReport():
     global report_results_temp
     user = os.getlogin()
     
-    data_folder = r"C:\\Users\\%s\\AppData\\Roaming\\PCaser" %user
+    data_folder = r"C:\\Users\\%s\\AppData\\Roaming\\PKaser" %user
     report_results_temp = data_folder+"\\nt-json-files\\temp_report_results.json"
     data_file = data_folder+"\\config.txt"
 
 
     config = configparser.ConfigParser()
     config.read(data_file)
+    username = config.get('credentials','username')
     sf = Salesforce(
-    username=config.get('credentials','username'),
-    password=config.get('credentials','password'),
-    security_token=config.get('credentials','security_token')
+        username= username,
+        password=keyring.get_password("pkaser-userinfo", username),
+        security_token=keyring.get_password("pkaser-token", username)
     )
 
 

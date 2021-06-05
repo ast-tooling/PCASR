@@ -5,6 +5,7 @@ import os
 import json
 from simple_salesforce import Salesforce
 import configparser
+import keyring
 
 import create_tool_tip
 
@@ -87,8 +88,8 @@ class saveDialogWindow:
 
         # Initialize Data File Location
         user = os.getlogin()
-        self.data_folder = "C:\\Users\\%s\\AppData\\Roaming\\PCaser" %user
-        self.data_file = self.data_folder+"\\pcasr.json"
+        self.data_folder = "C:\\Users\\%s\\AppData\\Roaming\\PKaser" %user
+        self.data_file = self.data_folder+"\\nt-json-files\\pkaser.json"
 
         # If pcase already exists in data, load and validate
         if edit:
@@ -144,16 +145,16 @@ class saveDialogWindow:
     def getSFInfo(self,sf_link):
 
         if not os.path.exists(self.data_folder+"\\config.txt"):
-            tk.messagebox.showwarning('Error', 'You must first add your sf credentials to\nC:\\Users\\<you>\\AppData\\Roaming\\PCASR\\credentials.txt\nAn example can be found at Z:\\AST\\Utilities\\PCASR')
+            tk.messagebox.showwarning('Error', 'You must first add your sf credentials to\nC:\\Users\\<you>\\AppData\\Roaming\\PKaser\\credentials.txt\nAn example can be found at Z:\\AST\\Utilities\\PKaser')
             return False
         else:
             config = configparser.ConfigParser()
             config.read(self.data_folder+"\\config.txt")
-
+            username = config.get('credentials','username')
             client = Salesforce(
-                username=config.get('credentials','username'),
-                password=config.get('credentials','password'),
-                security_token=config.get('credentials','security_token')
+                username= username,
+                password=keyring.get_password("pkaser-userinfo", username),
+                security_token=keyring.get_password("pkaser-token", username)
                 )
             case_id = sf_link.split('/')[-1]
 

@@ -22,8 +22,8 @@ class aboutWindow:
         self.version_label = ttk.Label(self.about_window,text="v0.1.4.0")
         self.git_label = tk.Label(self.about_window,text='https://github.com/ast-tooling/PCASR',fg='blue',cursor='hand2')
         self.copyright_label = ttk.Label(self.about_window,text="Copyright © 2020 - 2021 Factor Systems Inc. Dba BillTrust")
-        self.author_label = ttk.Label(self.about_window,text="Orginal Source Code Written By Matthew DeGenaro")
-        self.maintainer_label = ttk.Label(self.about_window,text="Maintained by: Christopher Durham")
+        self.author_label = ttk.Label(self.about_window,text="Orginal Source Code Written By: Matthew DeGenaro")
+        self.maintainer_label = ttk.Label(self.about_window,text="Maintaince & Feature Updates By: Christopher Durham")
         
         self.git_label.bind("<Button-1>",lambda e: self.openWebsite('https://github.com/ast-tooling/PCASR'))
 
