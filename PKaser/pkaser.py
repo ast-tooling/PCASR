@@ -37,7 +37,7 @@ import watch_dog
 from tkinter_custom_button import TkinterCustomButton
 from codeConflict import *
 from progressBar import run_func_with_loading_popup
-
+from rightClickFunctions import addComment
 
 '''The Main Class of the project.  
 
@@ -355,7 +355,6 @@ class PCaser:
    
 
     def initTreeView(self):
-
          # Tab Definitions
         self.pcase_tab_area = ttk.Notebook(self.pcase_list_frame2,width=245,height=650)
         #self.pcase_tab_area.bind('<<NotebookTabChanged>>', self.on_tab_change)
@@ -372,11 +371,6 @@ class PCaser:
         self.pcase_list = ttk.Treeview(self.current_tab,height=32,columns=columns,show="headings")
         self.pcase_list.bind('<<TreeviewSelect>>',self.onselect)
         
-        #lambda event ,msg=self.msg, window_title=self.window_title, bounce_speed=self.bounce_speed, pb_length=self.pb_length:
-        #                    run_func_with_loading_popup(lambda: self.onselect, msg, window_title, bounce_speed, pb_length))
-        
-        #self.pcase_list.focus_set()
-
         self.pcase_list.column('PCase',width=78,stretch=False,minwidth=78)
         self.pcase_list.column('CSR Name',width=163,stretch=False,minwidth=100)
 
@@ -503,6 +497,7 @@ class PCaser:
         self.edit_menu        = Menu(self.menu_bar, tearoff=0)
         self.tool_menu        = Menu(self.menu_bar, tearoff=0)
         self.help_menu        = Menu(self.menu_bar, tearoff=0)
+        self.right_click_menu = Menu(self.mainwindow, tearoff=0)
 
         # Add Menu Options to Bar
         self.menu_bar.add_cascade(label="PKaser Options:")
@@ -526,7 +521,6 @@ class PCaser:
         # Add subitems for Edit Option
         data_folder = self.getDataFolder()
         user = os.getlogin()
-        print("Here is the data folder" +data_folder)
         self.edit_menu.add_command(label="PCase ♫'s Directory",command=lambda: self.openDir("C:\\Users\\%s\\AppData\\Roaming\\PKaser\\pcasenotes" %user))
         self.edit_menu.add_separator()
         self.edit_menu.add_command(label="Cut",accelerator="Ctrl+X", command=self.__cut__)
@@ -535,26 +529,29 @@ class PCaser:
 
 
         # Add subitems for Tools Option
-        self.tool_menu.add_command(label="Timestamp", command=self.__regularNoteStamp__)
-        self.tool_menu.add_command(label="SF Comment", command=self.__salesforceComment__)
-        self.tool_menu.add_command(label="Case Commit", command=self.__CaseCommittedNoteStamp__)
+        self.tool_menu.add_command(label="Insert-Timestamp", command=self.__regularNoteStamp__)
+        self.tool_menu.add_command(label="Insert-SF-Comment", command=self.__salesforceComment__)
+        self.tool_menu.add_command(label="Insert-Case-Committed-Comment", command=self.__CaseCommittedNoteStamp__)
+        self.tool_menu.add_command(label="Insert-To-EIPP-Comment", command=self.__sentToEIPP__)
+        self.tool_menu.add_command(label="Insert-To-FCI-Comment", command=self.__sentToFCI__)
         self.tool_menu.add_separator()
         self.tool_menu.add_command(label="Start Timer", command=self.__caseStartTime__)
         self.tool_menu.add_command(label="End Timer", command=self.__caseEndTime__)
         self.tool_menu.add_command(label="Total Time", command=self.__totalTimeSpent__)
 
         self.toplevel.bind_all("<Control-n>",self.newWindowWrapper)
-        #self.toplevel.bind_all("<Control-q>",self.killWindowWrapper)
         self.toplevel.bind_all("<Control-c>",self.copyWrapper)
-        #self.toplevel.bind_all("<Control-v>",self.pasteWrapper) # caused double copy bug.
         self.toplevel.bind_all("<Control-x>",self.cutWrapper)
+
+        # Right click options
+        self.toplevel.bind_all("<Button-3>", self.rightClickMenu)
+
         # Add 1 - File Menu Subitems
         self.menu_item_1.add_command(label="New",accelerator="Ctrl+N",command=self.newWindow)
         self.menu_item_1.add_command(label="UnArchive",command=self.unArchiveCase)
         self.menu_item_1.add_command(label="Delete",command=self.deleteCase)
         self.menu_item_1.add_separator()
         self.menu_item_1.add_command(label="Quit",accelerator="Ctrl+Q",command=self.force_kill_window)
-        #self.menu_item_1.add_command(label="Force Quit",command=self.force_kill_window)
 
         # Add 2- Edit Menu Subitems
         self.menu_item_2.add_command(label="Change PCase Details",command=self.editWindow)
@@ -572,9 +569,12 @@ class PCaser:
         self.menu_item_4.add_command(label="About", command=lambda:about_window.aboutWindow(self))
         self.menu_item_4.add_command(label="Confluence Page",command=lambda: self.openWebsite("https://billtrust.atlassian.net/wiki/spaces/AT/overview"))
 
-
-   
-        
+        # Right Click Menu Options
+        self.right_click_menu.add_command(label="Add Case Comment",command=lambda: addComment(self.returnParentId(),self.__returnSelectedText__()))
+        self.right_click_menu.add_separator()
+        self.right_click_menu.add_command(label="Cut",accelerator="Ctrl+X", command=self.__cut__)
+        self.right_click_menu.add_command(label="Copy", accelerator="Ctrl+C",command=self.__copy2__)
+        self.right_click_menu.add_command(label="Paste", accelerator="Ctrl+V",command=self.__paste__)
 
     def initNotePadTextArea(self):
         self.text_area        = Text(self.notepad_frame, wrap=WORD, fg="#003035",width=95,height=36)
@@ -752,11 +752,15 @@ class PCaser:
     '''Handles updating UI listbox with FTP root contents
     '''
     def ftpListUpdate(self):
-        current_contents = [f for f in os.listdir(self.server) if os.path.isfile(os.path.join(self.server, f))]
-        self.ftpList.delete(0,self.ftpList.size())
-        for item in current_contents:
-            if item != "Thumbs.db":
-                self.ftpList.insert(tk.END,item)
+        try:
+            current_contents = [f for f in os.listdir(self.server) if os.path.isfile(os.path.join(self.server, f))]
+            self.ftpList.delete(0,self.ftpList.size())
+            for item in current_contents:
+                if item != "Thumbs.db":
+                    self.ftpList.insert(tk.END,item)
+        except FileNotFoundError:
+            # NEED TO REVIEW THIS PASS STATEMENT.
+            pass
 
 
     def newWindowWrapper(self,parent):
@@ -804,10 +808,7 @@ class PCaser:
             self.__openOnSelect__()
             self.savePCase()
             
-        
-        
-    
-    
+
     '''Called by the archive treeview when a new selection is made.
     
     Disables ftp root watchdog, calls updateInfo
@@ -840,7 +841,6 @@ class PCaser:
         data - either json_data or archive_data, the json with case data in memory
     '''
     def updateInfo(self,values,data):
-
         pcase = values[0]
         cust_name = values[1]
         case_number = data[pcase]['case_number']
@@ -865,8 +865,6 @@ class PCaser:
 
         self.code_conflict_tree()
         
-        
-
     def savePCase(self):
         print("savePCase(self) ran")
         data_folder = self.getDataFolder()
@@ -1088,7 +1086,7 @@ class PCaser:
             pcase = self.getPCaseString()
             if pcase != 'Welcome to The PKaser':
                 case_id = self.json_data[pcase]['sf_link'].split('/')[-1]
-
+                print(case_id)
                 case_info = client.Case.get(case_id)
 
                 self.json_data[pcase]['last_modified'] = case_info['LastModifiedDate']
@@ -1098,7 +1096,12 @@ class PCaser:
                 index = self.pcase_list.selection()
                 values= self.pcase_list.item(index)['values']
                 self.updateInfo(values,self.json_data)
-                
+
+    def returnParentId(self):
+        pcase = self.getPCaseString()
+        if pcase != 'Welcome to The PKaser':
+            parentId = self.json_data[pcase]['sf_link'].split('/')[-1]
+            return parentId       
                 
     def saveJSON(self,file,data):
         with open(file,'w') as outfile:
@@ -1107,7 +1110,7 @@ class PCaser:
     
     def code_conflict_tree(self):
         self.conflicts = find_OpenCases(self.getCustString(), self.getPCaseString())
-        print(self.conflicts)
+        #print(self.conflicts)
         conflicts = self.conflicts
         # Define Tree
         self.conflictTree = ttk.Treeview(self.code_conflict_frame)
@@ -1217,6 +1220,12 @@ class PCaser:
                             rowCount += 1
 
         self.conflictTree.grid(row=1, column=0)
+
+    def rightClickMenu(self, event):
+        try:
+            self.right_click_menu.tk_popup(event.x_root, event.y_root)
+        finally:
+            self.right_click_menu.grab_release()
             
     #Some Helpful mutator and accessor methods:
     
@@ -1394,7 +1403,7 @@ class PKaseNotesFuctions(PCaser):
         self.user = os.getlogin()
         self.today = datetime.datetime.now().date()
         self.timestamp = "%s_%s"%(self.user,self.today)
-        self.salesforceComment= "%s\n\nQA Items:\nBA Items:\nPM Items:\nData Needed:\n\nResolution:\n\nPre:\nPost:\n\nUpdates Made To:\n-----------------------------------------------------------------------------------------------\n"%(self.timestamp)
+        self.salesforceComment= "%s\n\nQA Items:\nPending QA:\nBA Items:\nPM Items:\nData Needed:\n\nResolution:\n\nPre:\nPost:\n\nUpdates Made To:\n-----------------------------------------------------------------------------------------------\n"%(self.timestamp)
         self.text_area.mark_set("insert",1.0)
         self.text_area.insert(INSERT, self.salesforceComment)
         self.text_area.configure(state="normal")
@@ -1410,10 +1419,28 @@ class PKaseNotesFuctions(PCaser):
     def __CaseCommittedNoteStamp__(self):
         self.user = os.getlogin()
         self.today = datetime.datetime.now().date()
-        self.timestamp = "%s_%s\nCase Commited.\n-----------------------------------------------------------------------------------------------\n"%(self.user,self.today)
+        self.timestamp = "%s_%s\nCase Committed. Ready To Roll.\n-----------------------------------------------------------------------------------------------\n"%(self.user,self.today)
         self.text_area.mark_set("insert",1.0)
         self.text_area.insert(INSERT, self.timestamp)
         self.text_area.configure(state="normal")
+        addComment(self.returnParentId(),"Case Committed. Ready To Roll.")
+
+    def __sentToEIPP__(self):
+        self.user = os.getlogin()
+        self.today = datetime.datetime.now().date()
+        self.timestamp = "%s_%s\nSent Case To EIPP.\n-----------------------------------------------------------------------------------------------\n"%(self.user,self.today)
+        self.text_area.mark_set("insert",1.0)
+        self.text_area.insert(INSERT, self.timestamp)
+        self.text_area.configure(state="normal")
+        addComment(self.returnParentId(),"Sent Case To EIPP.")
+    def __sentToFCI__(self):
+        self.user = os.getlogin()
+        self.today = datetime.datetime.now().date()
+        self.timestamp = "%s_%s\nSent Case To FCI.\n-----------------------------------------------------------------------------------------------\n"%(self.user,self.today)
+        self.text_area.mark_set("insert",1.0)
+        self.text_area.insert(INSERT, self.timestamp)
+        self.text_area.configure(state="normal")
+        addComment(self.returnParentId(),"Sent Case To FCI.")
 
     def __newFile__(self):
         #self.root.title("Untitled - Notepad")
@@ -1513,6 +1540,12 @@ class PKaseNotesFuctions(PCaser):
         total_time_message = "You spent %s Hours %s minutes on %s."%(rd.hours,rd.minutes,self.getCustString())
 
         tk.messagebox.showinfo("Total Time",total_time_message)
+    
+
+    def __returnSelectedText__(self):
+        selectedText = self.text_area.selection_get()
+        return selectedText
+        
         
         
 
