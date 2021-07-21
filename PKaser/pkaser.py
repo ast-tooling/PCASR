@@ -16,6 +16,7 @@ import time
 import datetime
 import dateutil.relativedelta
 import keyring
+import pyperclip
 
 # Called Imports for PKase Notes Code merge.
 from tkinter import *
@@ -287,14 +288,23 @@ class PCaser:
 
         # Buttons
         self.button1 = ttk.Button(self.top_frame, text="Edit",command=self.editTemplates)
+        #self.button1 = TkinterCustomButton(master=self.top_frame,text="Edit",bg_color="#e6e6e6",fg_color="#e6e6e6",corner_radius=10,text_color="white",hover_color="#53ba65",width=65,height=20,command=self.editTemplates)
         self.button2 = ttk.Button(self.top_frame, text="Edit",command=self.editParsers)
+        #self.button2 = TkinterCustomButton(master=self.top_frame,text="Edit",bg_color="#ffffcc",fg_color="#003035",corner_radius=10,text_color="white",hover_color="#53ba65",width=65,height=20,command=self.editParsers)
         self.button3 = ttk.Button(self.top_frame, text="Edit",command=self.editScripts)
+        #self.button3 = TkinterCustomButton(master=self.top_frame,text="Edit",bg_color="#ffffcc",fg_color="#156184",corner_radius=10,text_color="white",hover_color="#53ba65",width=65,height=20,command=self.editScripts)
         self.button4 = ttk.Button(self.top_frame, text="Edit",command=self.editSamples)
+        #self.button4 = TkinterCustomButton(master=self.top_frame,text="Edit",bg_color="#ffffcc",fg_color="#003035",corner_radius=10,text_color="white",hover_color="#53ba65",width=65,height=20,command=self.editSamples)
         self.button5 = ttk.Button(self.top_frame, text="Edit",command=self.editRelease)
+        #self.button5 = TkinterCustomButton(master=self.top_frame,text="Edit",bg_color="#ffffcc",fg_color="#156184",corner_radius=10,text_color="white",hover_color="#53ba65",width=65,height=20,command=self.editRelease)
         self.button6 = ttk.Button(self.top_frame, text="Push",command=self.pushTemplates)
+        #self.button6 = TkinterCustomButton(master=self.top_frame,text="Push",bg_color="#ffffcc",fg_color="#003035",corner_radius=10,text_color="white",hover_color="#53ba65",width=65,height=20,command=self.pushTemplates)
         self.button7 = ttk.Button(self.top_frame, text="Push",command=self.pushParsers)
+        #self.button7 = TkinterCustomButton(master=self.top_frame,text="Push",bg_color="#ffffcc",fg_color="#156184",corner_radius=10,text_color="white",hover_color="#53ba65",width=65,height=20,command=self.pushParsers)
         self.button8 = ttk.Button(self.top_frame, text="Push",command=self.pushScripts)
+        #self.button8 = TkinterCustomButton(master=self.top_frame,text="Push",bg_color="#ffffcc",fg_color="#003035",corner_radius=10,text_color="white",hover_color="#53ba65",width=65,height=20,command=self.pushScripts)
         self.button9 = ttk.Button(self.top_frame, text="Push",command=self.pushSamples)
+        #self.button9 = TkinterCustomButton(master=self.top_frame,text="Push",bg_color="#ffffcc",fg_color="#003035",corner_radius=10,text_color="white",hover_color="#53ba65",width=65,height=20,command=self.pushSamples)
         self.button10 = ttk.Button(self.top_frame, text="Push",command=self.pushRelease)
 
         # Labels
@@ -497,6 +507,8 @@ class PCaser:
         self.edit_menu        = Menu(self.menu_bar, tearoff=0)
         self.tool_menu        = Menu(self.menu_bar, tearoff=0)
         self.help_menu        = Menu(self.menu_bar, tearoff=0)
+        self.sf_menu          = Menu(self.menu_bar, tearoff=0)
+        self.ts_menu        = Menu(self.menu_bar, tearoff=0)
         self.right_click_menu = Menu(self.mainwindow, tearoff=0)
 
         # Add Menu Options to Bar
@@ -510,6 +522,8 @@ class PCaser:
         #self.menu_bar.add_cascade(label="File", menu=self.file_menu)
         self.menu_bar.add_cascade(label="Edit", menu=self.edit_menu)
         self.menu_bar.add_cascade(label="Tools", menu=self.tool_menu)
+        self.menu_bar.add_cascade(label="Update SF", menu=self.sf_menu)
+        self.menu_bar.add_cascade(label="Timestamps", menu=self.ts_menu)
 
 
         # Add subitems to File Option
@@ -529,19 +543,33 @@ class PCaser:
 
 
         # Add subitems for Tools Option
-        self.tool_menu.add_command(label="Insert-Timestamp", command=self.__regularNoteStamp__)
-        self.tool_menu.add_command(label="Insert-SF-Comment", command=self.__salesforceComment__)
-        self.tool_menu.add_command(label="Insert-Case-Committed-Comment", command=self.__CaseCommittedNoteStamp__)
-        self.tool_menu.add_command(label="Insert-To-EIPP-Comment", command=self.__sentToEIPP__)
-        self.tool_menu.add_command(label="Insert-To-FCI-Comment", command=self.__sentToFCI__)
+        self.tool_menu.add_command(label="Copy PCase",accelerator="Alt+g", command=self.copyPCase)
+        self.tool_menu.add_command(label="Copy SFCase",accelerator="Alt+b", command=self.copySFCase)
+        self.tool_menu.add_command(label="Copy PCase_CSRNAME",accelerator="Alt+n",command=self.copyPCaseAndCSRName)
         self.tool_menu.add_separator()
         self.tool_menu.add_command(label="Start Timer", command=self.__caseStartTime__)
         self.tool_menu.add_command(label="End Timer", command=self.__caseEndTime__)
         self.tool_menu.add_command(label="Total Time", command=self.__totalTimeSpent__)
 
+        # Add subitems for Update SF OPtion
+        self.sf_menu.add_command(label="Add SF Case Comment",command=lambda: addComment(self.returnParentId(),self.__returnSelectedText__()))
+        self.sf_menu.add_command(label="To-EIPP-Comment", command=self.__sentToEIPP__)
+        self.sf_menu.add_command(label="To-FCI-Comment", command=self.__sentToFCI__)
+        self.sf_menu.add_command(label="Committed-Comment", command=self.__CaseCommittedNoteStamp__)
+
+        # Add subitems for Timestamp Option
+        self.ts_menu.add_command(label="Insert-Timestamp", command=self.__regularNoteStamp__)
+        self.ts_menu.add_command(label="Insert-SF-Comment", command=self.__salesforceComment__)
+        self.ts_menu.add_command(label="Insert-FF-Comment", command=self.__FileFailureComment__)
+
+
+
         self.toplevel.bind_all("<Control-n>",self.newWindowWrapper)
         self.toplevel.bind_all("<Control-c>",self.copyWrapper)
         self.toplevel.bind_all("<Control-x>",self.cutWrapper)
+        self.toplevel.bind_all("<Alt-g>",self.copyPCaseWrapper)
+        self.toplevel.bind_all("<Alt-b>",self.copySFCaseWrapper)
+        self.toplevel.bind_all("<Alt-n>",self.copyPCaseAndCSRNameWrapper)
 
         # Right click options
         self.toplevel.bind_all("<Button-3>", self.rightClickMenu)
@@ -570,11 +598,11 @@ class PCaser:
         self.menu_item_4.add_command(label="Confluence Page",command=lambda: self.openWebsite("https://billtrust.atlassian.net/wiki/spaces/AT/overview"))
 
         # Right Click Menu Options
-        self.right_click_menu.add_command(label="Add Case Comment",command=lambda: addComment(self.returnParentId(),self.__returnSelectedText__()))
-        self.right_click_menu.add_separator()
         self.right_click_menu.add_command(label="Cut",accelerator="Ctrl+X", command=self.__cut__)
         self.right_click_menu.add_command(label="Copy", accelerator="Ctrl+C",command=self.__copy2__)
         self.right_click_menu.add_command(label="Paste", accelerator="Ctrl+V",command=self.__paste__)
+        self.right_click_menu.add_separator()
+        self.right_click_menu.add_command(label="Add SF Case Comment",command=lambda: addComment(self.returnParentId(),self.__returnSelectedText__()))
 
     def initNotePadTextArea(self):
         self.text_area        = Text(self.notepad_frame, wrap=WORD, fg="#003035",width=95,height=36)
@@ -772,11 +800,16 @@ class PCaser:
         self.__copy2__()
     
     def pasteWrapper(self, parent):
-        print("pasteWrapper Ran")
         self.__paste__()
 
     def cutWrapper(self, parent):
         self.__cut__
+    def copyPCaseWrapper(self,parent):
+        self.copyPCase()
+    def copySFCaseWrapper(self,parent):
+        self.copySFCase()
+    def copyPCaseAndCSRNameWrapper(self,parent):
+        self.copyPCaseAndCSRName()
 
     def unArchiveWrapper(self, parent):
         self.unArchiveCase()
@@ -966,7 +999,6 @@ class PCaser:
             
 
             abspath = "Z:\\IT Documents\\QA\\" + pcase
-            print("Here is the path:" + abspath)
             self.insert_node('', abspath, abspath)
             self.tree.bind('<<TreeviewOpen>>', self.open_node)
 
@@ -990,7 +1022,6 @@ class PCaser:
         if abspath:
             self.tree.delete(self.tree.get_children(node))
             for p in os.listdir(abspath):
-                print("%s is a directory in: %s"%(p, abspath))
                 self.insert_node(node, p, os.path.join(abspath, p))
 
     ''' Returns a list of the files in a given directory, optionally of a specified file type.
@@ -1109,6 +1140,12 @@ class PCaser:
 
     
     def code_conflict_tree(self):
+        def selectItem(a):
+            curItem = self.conflictTree.focus()
+            returnSelected = self.conflictTree.item(curItem).get("text")
+            print(returnSelected)
+            return str(returnSelected)
+
         self.conflicts = find_OpenCases(self.getCustString(), self.getPCaseString())
         #print(self.conflicts)
         conflicts = self.conflicts
@@ -1123,6 +1160,9 @@ class PCaser:
 
         #Create Heading
         self.conflictTree.heading("#0", text="Potential Conflicts", anchor="w")
+
+        self.conflictTree.bind('<Double-Button-1>', selectItem)
+
         # Add Data
         rowCount = 1
         for iConflict in conflicts:
@@ -1146,71 +1186,71 @@ class PCaser:
                     for i in range(len(iConflict[pcaseNumber])):
                         value = iConflict[pcaseNumber][i]
                         if i == 0:
-                            text = "PCaseNumber: %s"%(value)
+                            text = "SFNumber ~ %s"%(value)
                             self.conflictTree.insert(parent='', index='end', iid=rowCount, text=text)
                             self.conflictTree.move(rowCount, captureRowCount, captureRowCount)
                             rowCount += 1
                         elif i == 1:
                             value = value.strip()
                             if value != "":
-                                text = "sfCaseSubject: %s"%(value)
+                                text = "sfCaseSubject ~ %s"%(value)
                                 self.conflictTree.insert(parent='', index='end', iid=rowCount, text=text)
                                 self.conflictTree.move(rowCount, captureRowCount, captureRowCount)
                                 rowCount += 1
                             else:
-                                text = "sfCaseSubject: None Provided"
+                                text = "sfCaseSubject ~ None Provided"
                                 self.conflictTree.insert(parent='', index='end', iid=rowCount, text=text)
                                 self.conflictTree.move(rowCount, captureRowCount, captureRowCount)
                                 rowCount += 1
                         elif i == 2:
-                            text = "Current Owner: %s"%(value)
+                            text = "Current Owner ~ %s"%(value)
                             self.conflictTree.insert(parent='', index='end', iid=rowCount, text=text)
                             self.conflictTree.move(rowCount, captureRowCount, captureRowCount)
                             rowCount += 1
                         elif i == 3:
-                            text = "Roll Status: %s"%(value)
+                            text = "Roll Status ~ %s"%(value)
                             self.conflictTree.insert(parent='', index='end', iid=rowCount, text=text)
                             self.conflictTree.move(rowCount, captureRowCount, captureRowCount)
                             rowCount += 1
                         elif i == 4:
-                            text = "Case Status: %s"%(value)
+                            text = "Case Status ~ %s"%(value)
                             self.conflictTree.insert(parent='', index='end', iid=rowCount, text=text)
                             self.conflictTree.move(rowCount, captureRowCount, captureRowCount)
                             rowCount += 1
 
                         elif i == 5:
-                            text = "PCase Path: %s"%(value)
+                            text = "PCase Path ~ %s"%(value)
                             self.conflictTree.insert(parent='', index='end', iid=rowCount, text=text)
                             self.conflictTree.move(rowCount, captureRowCount, captureRowCount)
                             rowCount += 1
 
                         elif i == 6:
-                            text = "Template(s): %s"%("".join(value))
+                            text = "Template(s) ~ %s"%("".join(value))
                             self.conflictTree.insert(parent='', index='end', iid=rowCount, text=text)
                             self.conflictTree.move(rowCount, captureRowCount, captureRowCount)
                             rowCount += 1
 
 
                         elif i == 7:
-                            text = "Image(s): %s"%("".join(value))
+                            text = "Image(s) ~ %s"%("".join(value))
                             self.conflictTree.insert(parent='', index='end', iid=rowCount, text=text)
                             self.conflictTree.move(rowCount, captureRowCount, captureRowCount)
                             rowCount += 1
 
                         elif i == 8:
-                            text = "Terms Backer(s): %s"%("".join(value))
+                            text = "Terms Backer(s) ~ %s"%("".join(value))
                             self.conflictTree.insert(parent='', index='end', iid=rowCount, text=text)
                             self.conflictTree.move(rowCount, captureRowCount, captureRowCount)
                             rowCount += 1
 
                         elif i == 9:
-                            text = "Script(s): %s"%("".join(value))
+                            text = "Script(s) ~ %s"%("".join(value))
                             self.conflictTree.insert(parent='', index='end', iid=rowCount, text=text)
                             self.conflictTree.move(rowCount, captureRowCount, captureRowCount)
                             rowCount += 1
                         
                         elif i == 10:
-                            text = "Parser(s): %s"%("".join(value))
+                            text = "Parser(s) ~ %s"%("".join(value))
                             self.conflictTree.insert(parent='', index='end', iid=rowCount, text=text)
                             self.conflictTree.move(rowCount, captureRowCount, captureRowCount)
                             rowCount += 1
@@ -1226,6 +1266,15 @@ class PCaser:
             self.right_click_menu.tk_popup(event.x_root, event.y_root)
         finally:
             self.right_click_menu.grab_release()
+    
+    def copyPCase(self):
+        pyperclip.copy(self.getPCaseString())
+    def copySFCase(self):
+        pyperclip.copy(self.getCaseString())
+    def copyPCaseAndCSRName(self):
+        stamp = "%s_%s"%(self.getPCaseString(), self.getCustString())
+        pyperclip.copy(stamp)
+
             
     #Some Helpful mutator and accessor methods:
     
@@ -1404,6 +1453,16 @@ class PKaseNotesFuctions(PCaser):
         self.today = datetime.datetime.now().date()
         self.timestamp = "%s_%s"%(self.user,self.today)
         self.salesforceComment= "%s\n\nQA Items:\nPending QA:\nBA Items:\nPM Items:\nData Needed:\n\nResolution:\n\nPre:\nPost:\n\nUpdates Made To:\n-----------------------------------------------------------------------------------------------\n"%(self.timestamp)
+        self.text_area.mark_set("insert",1.0)
+        self.text_area.insert(INSERT, self.salesforceComment)
+        self.text_area.configure(state="normal")
+    
+
+    def __FileFailureComment__(self):
+        self.user = os.getlogin()
+        self.today = datetime.datetime.now().date()
+        self.timestamp = "%s_%s"%(self.user,self.today)
+        self.salesforceComment= "%s\nFile Failure Case\nData File:\nLine Number:\nColumn:\nDescription:\n\nLinks to any screenshots saved in the pcase:\nDiagnosis:\n\nReplicated in IMS Y/N:\nSuccessful Batch:\nResolution:\n-----------------------------------------------------------------------------------------------\n"%(self.timestamp)
         self.text_area.mark_set("insert",1.0)
         self.text_area.insert(INSERT, self.salesforceComment)
         self.text_area.configure(state="normal")
@@ -1588,8 +1647,5 @@ def main():
     
 if __name__ == '__main__':
     main()
-    
-    #app = PCaser()
-    #app.run()
     
 

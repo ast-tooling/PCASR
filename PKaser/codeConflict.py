@@ -52,6 +52,8 @@ def find_OpenCases(csr_name, current_pcase):
             checkpath = pcasePath
 
             caseStatus = case['CASESTATUS']
+            if caseStatus == "-":
+                caseStatus = "Not Set"
             #print("Case Status: %s"%(caseStatus))
 
             pcaseNumber = case['PCASENUMBER']
@@ -159,7 +161,7 @@ def find_OpenCases(csr_name, current_pcase):
 
                 #print("-----------End Case %s Details----------------"%(matches))
 
-            finalTrewViewDict = {pcaseNumber:[pcaseNumber,caseReason,whoHasCase,rollyet, caseStatus, pcasePath, templateList, imagesList, termsBackerList, pythonScriptList,parserFileList]}#,[fdtMiscList,scriptMiscList,parserMiscList,releaseBinMiscList]]}
+            finalTrewViewDict = {pcaseNumber:[sfCaseNumber,caseReason,whoHasCase,rollyet, caseStatus, pcasePath, templateList, imagesList, termsBackerList, pythonScriptList,parserFileList]}#,[fdtMiscList,scriptMiscList,parserMiscList,releaseBinMiscList]]}
             finalTreeViewList.append(finalTrewViewDict)
 
     if int(matches) == 0:

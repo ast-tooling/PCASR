@@ -35,5 +35,3 @@ def addComment(sf_link="",comment=""):
     if comment != "":
         sf.CaseComment.create(case_comment)
         messagebox.showinfo("Information", "Comment Added Successfully :)")
-
-#addComment("https://billtrust.my.salesforce.com/5001M00001isgRV","Test Case Comment")
