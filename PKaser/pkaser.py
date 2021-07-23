@@ -379,6 +379,7 @@ class PCaser:
         # Define active tab contents
         columns=["PCase","CSR Name"]
         self.pcase_list = ttk.Treeview(self.current_tab,height=32,columns=columns,show="headings")
+        self.veritcalScrollbar = ttk.Scrollbar(self.pcase_list_frame2, orient='vertical', command=self.pcase_list.yview)
         self.pcase_list.bind('<<TreeviewSelect>>',self.onselect)
         
         self.pcase_list.column('PCase',width=78,stretch=False,minwidth=78)
@@ -398,6 +399,7 @@ class PCaser:
         # Define archive tab contents
         columns=["PCase","CSR Name"]#,"Date Created"]
         self.archive_list = ttk.Treeview(self.archive_tab,height=32,columns=columns,show="headings")
+        self.veritcalScrollbar = ttk.Scrollbar(self.archive_list, orient='vertical', command=self.archive_list.yview)
         self.archive_list.bind('<<TreeviewSelect>>',self.archiveSelect)
 
         self.archive_list.column('PCase',width=78,stretch=False,minwidth=78)
@@ -428,7 +430,7 @@ class PCaser:
         self.new_button.grid(row=1,column=0,padx=1)
         self.update_button.grid(row=1,column=1,padx=1)
         self.archive_button.grid(row=1,column=2,padx=1,pady=2)
-        
+
 
     def initQuickButtons(self):
 
