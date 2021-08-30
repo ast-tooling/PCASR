@@ -35,10 +35,11 @@ import file_picker_window
 import copy_files_window
 import about_window
 import watch_dog
-from tkinter_custom_button import TkinterCustomButton
+from buttonsWrapper import TkinterCustomButton
 from codeConflict import *
-from progressBar import run_func_with_loading_popup
-from rightClickFunctions import addComment
+from salesforceUpdateCommands import addCaseComment, statusToEIPP, statusToFCI
+from winMergeU import *
+#from wrapperMethods import *
 
 '''The Main Class of the project.  
 
@@ -64,6 +65,7 @@ class PCaser:
         self.notes_hash = ""
         self.server_list = []
         self.data_folder = ""
+        self.document_folder = ""
         self.data_file = ""
         self.archive_file = ""
         self.pcase = ""
@@ -75,13 +77,14 @@ class PCaser:
         
         user = os.getlogin()
         data_folder = r"C:\\Users\\%s\\AppData\\Roaming\\PKaser" %user
+        document_folder = r"C:\\Users\\%s\\Documents" %user
         data_file = data_folder+"\\nt-json-files\pkaser.json"
         archive_file = data_folder+"\\nt-json-files\\archive.json"
         appIcon_file = data_folder+"\\images\\billTrustIcon.png"
         branding_image_file = data_folder+"\\images\\inapp-brand-image.png"
         config_file = data_folder+"\\config.txt"
         words_file = data_folder+"\\nt-program-files\\words.txt"
-        pcase_notes = data_folder+"\\pcasenotes\\"
+        pcase_notes = document_folder+"\\pcasenotes\\"
         last_selected = data_folder + "\\nt-program-files\\last-selected.txt"
         total_time_spent = data_folder +"\\nt-program-files\\total-time-spent.txt"
         
@@ -100,12 +103,6 @@ class PCaser:
 
         self.first_init = True
 
-        # Progress Bar Variable Intialization 
-        self.msg = 'Loading Please Wait !!!'        
-
-        self.bounce_speed = 9
-        self.pb_length = 200
-        self.window_title = "Loading..."
 
         # Call GUI initialization methods
         self.initMenuBar()
@@ -187,8 +184,8 @@ class PCaser:
         self.mainwindow = tk.Tk()
         self.mainwindow.title("The PKaser")
         self.mainwindow.resizable(height=None,width=None)
-        self.mainwindow.geometry('%dx%d+%d+%d' % (1480, 750, 1200, 0))
-        self.mainwindow.maxsize(1481, 750)
+        self.mainwindow.geometry('%dx%d+%d+%d' % (1510, 750, 1200, 0))
+        self.mainwindow.maxsize(1510, 750)
         self.mainwindow.grid_rowconfigure(0, weight=1)
         self.mainwindow.grid_columnconfigure(0, weight=1)
         self.toplevel = self.mainwindow.winfo_toplevel()
@@ -287,52 +284,63 @@ class PCaser:
         # Top Half
 
         # Buttons
-        self.button1 = ttk.Button(self.top_frame, text="Edit",command=self.editTemplates)
+        self.editTemplateButton = ttk.Button(self.top_frame, text="Edit",command=self.editTemplates)
         #self.button1 = TkinterCustomButton(master=self.top_frame,text="Edit",bg_color="#e6e6e6",fg_color="#e6e6e6",corner_radius=10,text_color="white",hover_color="#53ba65",width=65,height=20,command=self.editTemplates)
-        self.button2 = ttk.Button(self.top_frame, text="Edit",command=self.editParsers)
+        self.editParserButton = ttk.Button(self.top_frame, text="Edit",command=self.editParsers)
         #self.button2 = TkinterCustomButton(master=self.top_frame,text="Edit",bg_color="#ffffcc",fg_color="#003035",corner_radius=10,text_color="white",hover_color="#53ba65",width=65,height=20,command=self.editParsers)
-        self.button3 = ttk.Button(self.top_frame, text="Edit",command=self.editScripts)
+        self.editScriptButton = ttk.Button(self.top_frame, text="Edit",command=self.editScripts)
         #self.button3 = TkinterCustomButton(master=self.top_frame,text="Edit",bg_color="#ffffcc",fg_color="#156184",corner_radius=10,text_color="white",hover_color="#53ba65",width=65,height=20,command=self.editScripts)
-        self.button4 = ttk.Button(self.top_frame, text="Edit",command=self.editSamples)
+        self.editSampleButton = ttk.Button(self.top_frame, text="Edit",command=self.editSamples)
         #self.button4 = TkinterCustomButton(master=self.top_frame,text="Edit",bg_color="#ffffcc",fg_color="#003035",corner_radius=10,text_color="white",hover_color="#53ba65",width=65,height=20,command=self.editSamples)
-        self.button5 = ttk.Button(self.top_frame, text="Edit",command=self.editRelease)
+        self.editReleaseButton = ttk.Button(self.top_frame, text="Edit",command=self.editRelease)
         #self.button5 = TkinterCustomButton(master=self.top_frame,text="Edit",bg_color="#ffffcc",fg_color="#156184",corner_radius=10,text_color="white",hover_color="#53ba65",width=65,height=20,command=self.editRelease)
-        self.button6 = ttk.Button(self.top_frame, text="Push",command=self.pushTemplates)
+        self.pushTemplateButton = ttk.Button(self.top_frame, text="Push",command=self.pushTemplates)
         #self.button6 = TkinterCustomButton(master=self.top_frame,text="Push",bg_color="#ffffcc",fg_color="#003035",corner_radius=10,text_color="white",hover_color="#53ba65",width=65,height=20,command=self.pushTemplates)
-        self.button7 = ttk.Button(self.top_frame, text="Push",command=self.pushParsers)
+        self.pushParserButton = ttk.Button(self.top_frame, text="Push",command=self.pushParsers)
         #self.button7 = TkinterCustomButton(master=self.top_frame,text="Push",bg_color="#ffffcc",fg_color="#156184",corner_radius=10,text_color="white",hover_color="#53ba65",width=65,height=20,command=self.pushParsers)
-        self.button8 = ttk.Button(self.top_frame, text="Push",command=self.pushScripts)
+        self.pushScriptsButton = ttk.Button(self.top_frame, text="Push",command=self.pushScripts)
         #self.button8 = TkinterCustomButton(master=self.top_frame,text="Push",bg_color="#ffffcc",fg_color="#003035",corner_radius=10,text_color="white",hover_color="#53ba65",width=65,height=20,command=self.pushScripts)
-        self.button9 = ttk.Button(self.top_frame, text="Push",command=self.pushSamples)
+        self.pushSamplesButton = ttk.Button(self.top_frame, text="Push",command=self.pushSamples)
         #self.button9 = TkinterCustomButton(master=self.top_frame,text="Push",bg_color="#ffffcc",fg_color="#003035",corner_radius=10,text_color="white",hover_color="#53ba65",width=65,height=20,command=self.pushSamples)
-        self.button10 = ttk.Button(self.top_frame, text="Push",command=self.pushRelease)
+        self.pushReleaseButton = ttk.Button(self.top_frame, text="Push",command=self.pushRelease)
+        self.diffTemplateButton = ttk.Button(self.top_frame, text="Diff",command=self.diffTemplates)
+        self.diffParserButton = ttk.Button(self.top_frame, text="Diff", command=self.diffParser)
+        self.diffScriptButton = ttk.Button(self.top_frame, text="Diff",command=self.diffScripts)
+        self.diffReleaseButton = ttk.Button(self.top_frame, text="Diff", command=self.diffReleaseBin)
+        self.blankButton = ttk.Button(self.top_frame)
 
         # Labels
-        self.label1 = ttk.Label(self.top_frame,text="Templates")
-        self.label2 = ttk.Label(self.top_frame,text="ParserConfig")
-        self.label3 = ttk.Label(self.top_frame,text="Script")
-        self.label4 = ttk.Label(self.top_frame,text="SampleData")
-        self.label5 = ttk.Label(self.top_frame,text="ReleaseBin")
+        self.templateLabel = ttk.Label(self.top_frame,text="Templates")
+        self.parserLabel = ttk.Label(self.top_frame,text="ParserConfig")
+        self.scriptLabel = ttk.Label(self.top_frame,text="Script")
+        self.sampleDataLabel = ttk.Label(self.top_frame,text="SampleData")
+        self.releaseBinLabel = ttk.Label(self.top_frame,text="ReleaseBin")
 
 
         # Grid Everything
 
-        self.button1.grid(row=1,column=1)
-        self.button2.grid(row=2,column=1)
-        self.button3.grid(row=3,column=1)
-        self.button4.grid(row=4,column=1)
-        self.button5.grid(row=5,column=1)
-        self.button6.grid(row=1,column=2)
-        self.button7.grid(row=2,column=2)
-        self.button8.grid(row=3,column=2)
-        self.button9.grid(row=4,column=2)
-        self.button10.grid(row=5,column=2)
+        self.editTemplateButton.grid(row=1,column=1)
+        self.editParserButton.grid(row=2,column=1)
+        self.editScriptButton.grid(row=3,column=1)
+        self.editSampleButton.grid(row=4,column=1)
+        self.editReleaseButton.grid(row=5,column=1)
+        self.pushTemplateButton.grid(row=1,column=2)
+        self.pushParserButton.grid(row=2,column=2)
+        self.pushScriptsButton.grid(row=3,column=2)
+        self.pushSamplesButton.grid(row=4,column=2)
+        self.pushReleaseButton.grid(row=5,column=2)
+        self.diffTemplateButton.grid(row=1,column=3)
+        self.diffParserButton.grid(row=2,column=3)
+        self.diffScriptButton.grid(row=3,column=3)
+        self.blankButton.grid(row=4,column=3)
+        self.diffReleaseButton.grid(row=5,column=3)
+        
 
-        self.label1.grid(row=1,column=0,padx=87)
-        self.label2.grid(row=2,column=0)
-        self.label3.grid(row=3,column=0)
-        self.label4.grid(row=4,column=0)
-        self.label5.grid(row=5,column=0)
+        self.templateLabel.grid(row=1,column=0, padx=50)
+        self.parserLabel.grid(row=2,column=0)
+        self.scriptLabel.grid(row=3,column=0)
+        self.sampleDataLabel.grid(row=4,column=0)
+        self.releaseBinLabel.grid(row=5,column=0)
 
         # Bottom Half
         self.bot_frame.grid_propagate(1)
@@ -366,7 +374,7 @@ class PCaser:
 
     def initTreeView(self):
          # Tab Definitions
-        self.pcase_tab_area = ttk.Notebook(self.pcase_list_frame2,width=245,height=650)
+        self.pcase_tab_area = ttk.Notebook(self.pcase_list_frame2,width=250,height=650)
         #self.pcase_tab_area.bind('<<NotebookTabChanged>>', self.on_tab_change)
 
         self.current_tab = tk.Frame(self.pcase_tab_area)
@@ -378,8 +386,10 @@ class PCaser:
 
         # Define active tab contents
         columns=["PCase","CSR Name"]
-        self.pcase_list = ttk.Treeview(self.current_tab,height=32,columns=columns,show="headings")
-        self.veritcalScrollbar = ttk.Scrollbar(self.pcase_list_frame2, orient='vertical', command=self.pcase_list.yview)
+        self.pcase_list = ttk.Treeview(self.current_tab,height=31,columns=columns,show="headings")
+        self.veritcalScrollbar = ttk.Scrollbar(self.pcase_list_frame2, orient='vertical',command=self.pcase_list.yview)
+        self.pcase_list['yscrollcommand'] = self.veritcalScrollbar.set
+        self.veritcalScrollbar.grid(row=0,column=3)
         self.pcase_list.bind('<<TreeviewSelect>>',self.onselect)
         
         self.pcase_list.column('PCase',width=78,stretch=False,minwidth=78)
@@ -398,8 +408,7 @@ class PCaser:
 
         # Define archive tab contents
         columns=["PCase","CSR Name"]#,"Date Created"]
-        self.archive_list = ttk.Treeview(self.archive_tab,height=32,columns=columns,show="headings")
-        self.veritcalScrollbar = ttk.Scrollbar(self.archive_list, orient='vertical', command=self.archive_list.yview)
+        self.archive_list = ttk.Treeview(self.archive_tab,height=31,columns=columns,show="headings")
         self.archive_list.bind('<<TreeviewSelect>>',self.archiveSelect)
 
         self.archive_list.column('PCase',width=78,stretch=False,minwidth=78)
@@ -432,9 +441,10 @@ class PCaser:
         self.archive_button.grid(row=1,column=2,padx=1,pady=2)
 
 
+
+
     def initQuickButtons(self):
 
-        self.getPCaseString()
         self.quick_button_frame.grid_propagate(True)
 
         self.pcase_button = TkinterCustomButton(master=self.quick_button_frame,text="PCase",bg_color="#ffffcc",fg_color="#003035",corner_radius=10,text_color="white",hover_color="#53ba65",width=90,height=24,command=lambda: self.openDir("Z:\\IT Documents\\QA\\" + self.getPCaseString()))
@@ -528,16 +538,10 @@ class PCaser:
         self.menu_bar.add_cascade(label="Timestamps", menu=self.ts_menu)
 
 
-        # Add subitems to File Option
-        #self.file_menu.add_command(label="New", command=self.__newFile__)
-        #self.file_menu.add_command(label="Open", command=self.__openFile__)
-        #self.file_menu.add_command(label="Save As", command=self.__saveFileAs__)
-        #self.file_menu.add_command(label="AutoSave - Test", command=self.__autoOpen__)
-
         # Add subitems for Edit Option
         data_folder = self.getDataFolder()
         user = os.getlogin()
-        self.edit_menu.add_command(label="PCase ♫'s Directory",command=lambda: self.openDir("C:\\Users\\%s\\AppData\\Roaming\\PKaser\\pcasenotes" %user))
+        self.edit_menu.add_command(label="PCase ♫'s Directory",command=lambda: self.openDir("C:\\Users\\%s\\Documents\\pcasenotes" %user))
         self.edit_menu.add_separator()
         self.edit_menu.add_command(label="Cut",accelerator="Ctrl+X", command=self.__cut__)
         self.edit_menu.add_command(label="Copy", accelerator="Ctrl+C",command=self.__copy2__)
@@ -554,7 +558,7 @@ class PCaser:
         self.tool_menu.add_command(label="Total Time", command=self.__totalTimeSpent__)
 
         # Add subitems for Update SF OPtion
-        self.sf_menu.add_command(label="Add SF Case Comment",command=lambda: addComment(self.returnParentId(),self.__returnSelectedText__()))
+        self.sf_menu.add_command(label="Add SF Case Comment",command=lambda: addCaseComment(self.returnParentId(),self.__returnSelectedText__()))
         self.sf_menu.add_command(label="To-EIPP-Comment", command=self.__sentToEIPP__)
         self.sf_menu.add_command(label="To-FCI-Comment", command=self.__sentToFCI__)
         self.sf_menu.add_command(label="Committed-Comment", command=self.__CaseCommittedNoteStamp__)
@@ -604,7 +608,7 @@ class PCaser:
         self.right_click_menu.add_command(label="Copy", accelerator="Ctrl+C",command=self.__copy2__)
         self.right_click_menu.add_command(label="Paste", accelerator="Ctrl+V",command=self.__paste__)
         self.right_click_menu.add_separator()
-        self.right_click_menu.add_command(label="Add SF Case Comment",command=lambda: addComment(self.returnParentId(),self.__returnSelectedText__()))
+        self.right_click_menu.add_command(label="Add SF Case Comment",command=lambda: addCaseComment(self.returnParentId(),self.__returnSelectedText__()))
 
     def initNotePadTextArea(self):
         self.text_area        = Text(self.notepad_frame, wrap=WORD, fg="#003035",width=95,height=36)
@@ -1062,12 +1066,44 @@ class PCaser:
             if len(files) == 0:
                 tk.messagebox.showwarning('Error','No files found in directory')
             elif len(files) == 1:
+                print(files)
+                print(subDir)
+                print(files[0])
                 os.startfile(subFolder_path+"\\"+files[0], 'open')
+                print(subFolder_path+"\\"+files[0])
+            else:
+                selected_files = file_picker_window.filePickerWindow(self,subFolder_path).show()
+                print(selected_files)
+                if selected_files:
+                    for file in selected_files:
+                        os.startfile(subFolder_path+"\\"+file[1]+file[0], 'open')
+                        print(subFolder_path+"\\"+file[1]+file[0])
+
+
+    def diffFiles(self,subDir,fileType=""):
+        pcase = self.getPCaseString()
+        if pcase:
+            subFolder_path = "Z:\\IT Documents\\QA\\" + pcase + subDir
+            if fileType == ".csv":
+                astFolder_path = "C:\\AST\\FDT\\"
+            elif fileType == ".xml":
+                astFolder_path = "C:\\AST\\ParserConfigs\\"
+            elif fileType == ".py":
+                astFolder_path = "C:\\AST\\scripts\\"
+            elif fileType == "":
+                astFolder_path = "\\VC\\Release\\Bin"
+
+            files = self.filesInDir(subFolder_path,fileType)
+
+            if len(files) == 0:
+                tk.messagebox.showwarning('Error','No files found in directory')
+            elif len(files) == 1:
+                winMergeOpen(astFolder_path+"\\"+files[0],subFolder_path+"\\"+files[0])
             else:
                 selected_files = file_picker_window.filePickerWindow(self,subFolder_path).show()
                 if selected_files:
                     for file in selected_files:
-                        os.startfile(subFolder_path+"\\"+file[1]+file[0], 'open')
+                        winMergeOpen(astFolder_path+"\\"+file[0],subFolder_path+"\\"+file[1]+file[0])
                         
     ''' Given a subdirectory and a filetype, call classes that handle file copying.
     
@@ -1195,7 +1231,7 @@ class PCaser:
                         elif i == 1:
                             value = value.strip()
                             if value != "":
-                                text = "sfCaseSubject ~ %s"%(value)
+                                text = "sfCaseSubject ~ %s"%(value[:48])
                                 self.conflictTree.insert(parent='', index='end', iid=rowCount, text=text)
                                 self.conflictTree.move(rowCount, captureRowCount, captureRowCount)
                                 rowCount += 1
@@ -1346,7 +1382,6 @@ class PCaser:
 
     
     # Wrapper methods for each push/edit button
-
     def editTemplates(self):
         self.editFiles("\\FDT",".csv")
     def editParsers(self):
@@ -1370,7 +1405,6 @@ class PCaser:
             self.pushFiles("\\VC\\Scripts",".py")
         except FileNotFoundError:
             self.pushFiles("\\VC\\SCRIPTS",".py")
-
     def pushSamples(self):
         try:
             self.pushFiles("\\SAMPLE_DATA")
@@ -1378,6 +1412,20 @@ class PCaser:
             self.pushFiles("\\Sample Data")   
     def pushRelease(self):
         self.pushFiles("\\VC\\Release\\Bin",)
+    
+    def diffScripts(self):
+        try:
+            self.diffFiles("\\VC\\Scripts",".py")
+        except FileNotFoundError:
+            self.diffFiles("\\VC\\SCRIPTS",".py")
+    def diffTemplates(self):
+        self.diffFiles("\\FDT",".csv")
+
+    def diffParser(self):
+        self.diffFiles("\\VC\\ParserConfigs",".xml")
+    def diffReleaseBin(self):
+        self.diffFiles("\\VC\\Release\\Bin",)
+
 
 
     def openDir(self,path):
@@ -1484,7 +1532,7 @@ class PKaseNotesFuctions(PCaser):
         self.text_area.mark_set("insert",1.0)
         self.text_area.insert(INSERT, self.timestamp)
         self.text_area.configure(state="normal")
-        addComment(self.returnParentId(),"Case Committed. Ready To Roll.")
+        addCaseComment(self.returnParentId(),"Case Committed. Ready To Roll.")
 
     def __sentToEIPP__(self):
         self.user = os.getlogin()
@@ -1493,7 +1541,8 @@ class PKaseNotesFuctions(PCaser):
         self.text_area.mark_set("insert",1.0)
         self.text_area.insert(INSERT, self.timestamp)
         self.text_area.configure(state="normal")
-        addComment(self.returnParentId(),"Sent Case To EIPP.")
+        addCaseComment(self.returnParentId(),"Sent Case To EIPP.")
+        statusToEIPP(self.returnParentId())
     def __sentToFCI__(self):
         self.user = os.getlogin()
         self.today = datetime.datetime.now().date()
@@ -1501,7 +1550,8 @@ class PKaseNotesFuctions(PCaser):
         self.text_area.mark_set("insert",1.0)
         self.text_area.insert(INSERT, self.timestamp)
         self.text_area.configure(state="normal")
-        addComment(self.returnParentId(),"Sent Case To FCI.")
+        addCaseComment(self.returnParentId(),"Sent Case To FCI.")
+        statusToFCI(self.returnParentId())
 
     def __newFile__(self):
         #self.root.title("Untitled - Notepad")

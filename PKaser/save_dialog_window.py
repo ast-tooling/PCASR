@@ -10,7 +10,6 @@ import keyring
 import create_tool_tip
 
 '''Main Class for 'save' window
-
 Handles requesting user input for pcase information to save for new and 
 existing pcases.
 '''
@@ -129,6 +128,7 @@ class saveDialogWindow:
 
             json_file = open(self.data_file)
             data = json.load(json_file)
+            
             if pcase not in data:
                 data[pcase] = case_info
             else:

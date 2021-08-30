@@ -12,6 +12,9 @@ class filePickerWindow:
 
         self.picker_window = tk.Tk()
         self.picker_window.title("File Selector")
+        self.user = os.getlogin()
+        self.data_folder = r"C:\\Users\\%s\\AppData\\Roaming\\PKaser" %self.user
+        self.appIcon_file = self.data_folder+"\\images\\billTrustIcon.png"
 
         self.picker_frame = tk.Frame(self.picker_window,relief='raised', borderwidth=1,width=400,height=200)
         self.picker_frame.pack_propagate(0)
@@ -23,7 +26,6 @@ class filePickerWindow:
 
         # Set this window to appear on top of all other windows
         self.picker_window.attributes("-topmost",True)
-
         # Tell the window manager to give focus back after the X button is hit
         self.picker_window.protocol("WM_DELETE_WINDOW", self.kill_window)
 
