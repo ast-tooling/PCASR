@@ -1,5 +1,5 @@
 from salesForceRequest import *
-
+from tkinter import messagebox
 def find_OpenCases(csr_name, current_pcase):
 
     get_SalesForceReport()
@@ -8,9 +8,8 @@ def find_OpenCases(csr_name, current_pcase):
     current_case = csr_name
     current_pcase = current_pcase
     matches = 0
-
     finalTreeViewList = []
-
+    noconflict = False
     for case in openCaseList:
 
         imagesList = []
@@ -27,6 +26,7 @@ def find_OpenCases(csr_name, current_pcase):
         matchOnCsr = case['CSRUSERNAME']
         matchOnPCase = case['PCASENUMBER']
         rollStatus = case['ROLLSTATUS']
+        
         if current_case == matchOnCsr and current_pcase != matchOnPCase and rollStatus != "Rolled"and current_pcase != "P2929255": # Need pcase Number for if Condition to compare.
             matches += 1
             #print("-----------Start Case %s Details----------------"%(matches))
@@ -83,10 +83,10 @@ def find_OpenCases(csr_name, current_pcase):
                             if file.endswith(".csv"):
                                 #print("Template Found: %s"%(file))
                                 templateList.append(file)
-  
+
                             secondCheck = os.path.join(fdtFolder, file)
                             if os.path.isdir(secondCheck) and os.path.join(fdtFolder,file) != os.path.join(fdtFolder,"TERMS"):
-                                #print("%s in FDT"%(file))
+                            # print("%s in FDT"%(file))
                                 fdtMiscList.append(file)
 
                             pdf = '.pdf'
@@ -103,14 +103,14 @@ def find_OpenCases(csr_name, current_pcase):
                 try:
                     # Find Scripts
                     if os.listdir(scriptsFolder) != []:
- 
+
                         for file in os.listdir(scriptsFolder):
 
                             if file.endswith(".py"):
-                                #print("Script Found: %s"%(file))
+                            # print("Script Found: %s"%(file))
                                 pythonScriptList.append(file)
 
-                             
+                            
                             secondCheck = os.path.join(scriptsFolder, file)
                             os.path.isdir(secondCheck)
                             if os.path.isdir(secondCheck):
@@ -161,17 +161,23 @@ def find_OpenCases(csr_name, current_pcase):
 
                 #print("-----------End Case %s Details----------------"%(matches))
 
-            finalTrewViewDict = {pcaseNumber:[sfCaseNumber,caseReason,whoHasCase,rollyet, caseStatus, pcasePath, templateList, imagesList, termsBackerList, pythonScriptList,parserFileList]}#,[fdtMiscList,scriptMiscList,parserMiscList,releaseBinMiscList]]}
-            finalTreeViewList.append(finalTrewViewDict)
-
-    if int(matches) == 0:
-        noConflictMessage = "find_OpenCases Notification: No Current Conflicts"
-        finalTrewViewDict = {"NOCONFLICTS":"CURRENTLY NO CONFLICTS FOR"}
-        finalTreeViewList.append(finalTrewViewDict)
+            if (imagesList or templateList or
+                termsBackerList or pythonScriptList or
+                scriptMiscList or parserFileList or
+                parserMiscList or releaseBinList):
+                finalTrewViewDict = {pcaseNumber:[sfCaseNumber,caseReason,whoHasCase,rollyet, caseStatus, pcasePath, templateList, imagesList, termsBackerList, pythonScriptList,parserFileList]}#,[fdtMiscList,scriptMiscList,parserMiscList,releaseBinMiscList]]}
+                finalTreeViewList.append(finalTrewViewDict)
+                noconflict = True
+            else:
+                noConflictMessage = "find_OpenCases Notification: No Current Conflicts"
+                finalTrewViewDict = {"NOCONFLICT: %s"%(pcaseNumber):"CURRENTLY ISN'T IN CONFLICT"}
+                finalTreeViewList.append(finalTrewViewDict)
 
 
 
     return finalTreeViewList
+
+
 
 
 

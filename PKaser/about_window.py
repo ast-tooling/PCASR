@@ -19,7 +19,7 @@ class aboutWindow:
         # Set this window to appear on top of other windows
         self.about_window.attributes("-topmost",True)
 
-        self.version_label = ttk.Label(self.about_window,text="v0.1.4.0")
+        self.version_label = ttk.Label(self.about_window,text="v2.2")
         self.git_label = tk.Label(self.about_window,text='https://github.com/ast-tooling/PCASR',fg='blue',cursor='hand2')
         self.copyright_label = ttk.Label(self.about_window,text="Copyright © 2020 - 2021 Factor Systems Inc. Dba BillTrust")
         self.author_label = ttk.Label(self.about_window,text="Orginal Source Code Written By: Matthew DeGenaro")

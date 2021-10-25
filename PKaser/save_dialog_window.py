@@ -1,13 +1,17 @@
 import tkinter as tk
 from tkinter import ttk
+from tkinter import messagebox
+from tkinter.messagebox import askyesno
 import validators
 import os
 import json
 from simple_salesforce import Salesforce
 import configparser
 import keyring
+import ctypes
 
 import create_tool_tip
+from buttonsWrapper import TkinterCustomButton
 
 '''Main Class for 'save' window
 Handles requesting user input for pcase information to save for new and 
@@ -49,8 +53,8 @@ class saveDialogWindow:
         self.sf_link = tk.Label(self.save_frame,text="SF Link")
 
         # Initialize Entries
-        self.srd_entry = tk.Entry(self.save_frame,validate="focusout",validatecommand=self.validateSRD,width=50)
-        self.sf_entry = tk.Entry(self.save_frame,validate="focusout",validatecommand=self.validateSF,width=50)
+        self.srd_entry = ttk.Entry(self.save_frame,validate="focusout",validatecommand=self.validateSRD,width=50,style="EntryStyle.TEntry")
+        self.sf_entry = ttk.Entry(self.save_frame,validate="focusout",validatecommand=self.validateSF,width=50,style="EntryStyle.TEntry")
 
         # ✔ ❌ ❓
         # Initialize Verify Labels, Label Messages, and Tooltips
@@ -62,6 +66,7 @@ class saveDialogWindow:
 
 
         # Initialize Command Buttons
+        #self.save_button =TkinterCustomButton(master=self.save_window,text='Save',bg_color="#ffffcc",fg_color="#003035",corner_radius=5,text_color="white",hover_color="#53ba65",width=80,height=24,command=self.savePCase)
         self.save_button = ttk.Button(self.save_window,text="Save", command=self.savePCase,state=tk.DISABLED)
         self.cancel_button = ttk.Button(self.save_window,text="Cancel",command=self.kill_window)
         self.validate_button = ttk.Button(self.save_window,text="Validate")
@@ -100,7 +105,23 @@ class saveDialogWindow:
 
                 self.validateSRD()
                 self.validateSF()
-
+    
+    def takeOwnership(self):
+        answer = askyesno(title="BT Engineer Please Confirm!",
+                        message="Will you be taking ownership of this case?")
+        if answer:
+            def get_display_name(): # https://stackoverflow.com/questions/21766954/how-to-get-windows-users-full-name-in-python
+                GetUserNameEx = ctypes.windll.secur32.GetUserNameExW
+                NameDisplay = 3
+                size = ctypes.pointer(ctypes.c_ulong(0))
+                GetUserNameEx(NameDisplay, None, size)
+                nameBuffer = ctypes.create_unicode_buffer(size.contents.value)
+                GetUserNameEx(NameDisplay, nameBuffer, size)
+                return nameBuffer.value
+            fullName = get_display_name()
+            print(fullName)
+       
+        return fullName
     def savePCase(self):
 
         if not os.path.exists(self.data_file):
@@ -113,7 +134,6 @@ class saveDialogWindow:
                 json.dump(data,outfile)
 
         sf_link = self.sf_entry.get().strip()
-
         srd_link = ""
         if(self.validateSRD()):
             srd_link = self.srd_entry.get()
@@ -141,11 +161,13 @@ class saveDialogWindow:
             self.kill_window()
             self.the_parent.loadPCases()
             self.the_parent.pcase_list.selection_set(pcase)
+            self.takeOwnership()
 
     def getSFInfo(self,sf_link):
 
         if not os.path.exists(self.data_folder+"\\config.txt"):
-            tk.messagebox.showwarning('Error', 'You must first add your sf credentials to\nC:\\Users\\<you>\\AppData\\Roaming\\PKaser\\credentials.txt\nAn example can be found at Z:\\AST\\Utilities\\PKaser')
+            e = "No Config File Found. Please Run installer.bat file found in PKaser.zip"
+            tk.messagebox.showerror(message='Error: "{}"'.format(e))
             return False
         else:
             config = configparser.ConfigParser()
@@ -156,7 +178,10 @@ class saveDialogWindow:
                 password=keyring.get_password("pkaser-userinfo", username),
                 security_token=keyring.get_password("pkaser-token", username)
                 )
+            
             case_id = sf_link.split('/')[-1]
+            if 'lightning' in case_id:
+                case_id = sf_link.split('/')[6]
 
             case_info = client.Case.get(case_id)
 
@@ -170,6 +195,7 @@ class saveDialogWindow:
                 'cust_name':case_info['CSR_Username_Cases__c'],
                 'pcase':case_info['Z_Case_NoPath__c']
                 }
+            print(case_dict)
 
             return case_dict
 
