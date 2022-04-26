@@ -27,7 +27,7 @@ def find_OpenCases(csr_name, current_pcase):
         matchOnPCase = case['PCASENUMBER']
         rollStatus = case['ROLLSTATUS']
         
-        if current_case == matchOnCsr and current_pcase != matchOnPCase and rollStatus != "Rolled"and current_pcase != "P2929255": # Need pcase Number for if Condition to compare.
+        if current_case == matchOnCsr and current_pcase != matchOnPCase and rollStatus != "Rolled"and matchOnCsr != "BILLTRUST": # Need pcase Number for if Condition to compare.
             matches += 1
             #print("-----------Start Case %s Details----------------"%(matches))
             

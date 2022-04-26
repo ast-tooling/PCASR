@@ -6,8 +6,10 @@ import os
 import configparser
 import keyring
 from tkinter import messagebox
+import requests
 
 def get_SalesForceReport():
+    # code conflict report
     global report_results_temp
     user = os.getlogin()
     
@@ -88,3 +90,75 @@ def load_OpenCases():
     except json.decoder.JSONDecodeError as e:
         messagebox.showerror(message='error: "{}"'.format(e))
 
+
+def getQueueId(queue=""):
+    user = os.getlogin()
+    data_folder = r"C:\\Users\\%s\\AppData\\Roaming\\PKaser" %user
+    data_file = data_folder+"\\config.txt"
+    config = configparser.ConfigParser()
+    config.read(data_file)
+    username = config.get('credentials','username')
+    organizationId = config.get('credentials','organizationId')
+    session = requests.Session()
+    sf = Salesforce(
+        username= username,
+        password=keyring.get_password("pkaser-userinfo", username),
+        security_token=keyring.get_password("pkaser-token", username),
+        organizationId=organizationId,
+        session=session,
+    )
+   
+    result = sf.query("SELECT Id FROM QueueSobject WHERE Queue.Name = '%s'"%(queue))
+    for i in result['records']:
+        user_sf_id = i['Id']
+    return user_sf_id
+
+def getSfUserId():
+    user = os.getlogin()
+    data_folder = r"C:\\Users\\%s\\AppData\\Roaming\\PKaser" %user
+    data_file = data_folder+"\\config.txt"
+    config = configparser.ConfigParser()
+    config.read(data_file)
+    username = config.get('credentials','username')
+    organizationId = config.get('credentials','organizationId')
+    session = requests.Session()
+    sf = Salesforce(
+        username= username,
+        password=keyring.get_password("pkaser-userinfo", username),
+        security_token=keyring.get_password("pkaser-token", username),
+        organizationId=organizationId,
+        session=session,
+    )
+    sf_username = "%s@billtrust.com"%(user).lower()
+    result = sf.query("SELECT Id FROM User WHERE Username = '%s'"%(sf_username))
+    for i in result['records']:
+        user_sf_id = i['Id']
+    return user_sf_id
+
+
+def get_openCasesByOwner():
+    # AST Open Cases By Owner - Stand Up
+    global report_results_temp
+    user = os.getlogin()
+    
+    data_folder = r"C:\\Users\\%s\\AppData\\Roaming\\PKaser" %user
+    #report_results_temp = data_folder+"\\nt-json-files\\temp_report_results.json"
+    data_file = data_folder+"\\config.txt"
+
+    try:
+        config = configparser.ConfigParser()
+        config.read(data_file)
+        username = config.get('credentials','username')
+        report_id = '00O1M000007rUPZ'
+        sf = Salesforce(
+            username= username,
+            password=keyring.get_password("pkaser-userinfo", username),
+            security_token=keyring.get_password("pkaser-token", username)
+        )
+        report_results = sf.restful('analytics/reports/{}'.format(report_id))
+        with open(report_results_temp, 'w') as fp:
+            json.dump(report_results, fp)
+    except configparser.NoOptionError as e:
+        messagebox.showerror(message='error: "{}"'.format(e))
+    except json.decoder.JSONDecodeError as e: 
+        messagebox.showerror(message='error: "{}"'.format(e))

@@ -1,3 +1,4 @@
+import ctypes
 from requests.sessions import cookiejar_from_dict
 from simple_salesforce import Salesforce, SalesforceLogin
 import configparser
@@ -6,6 +7,7 @@ import os
 import requests
 from tkinter import * 
 from tkinter import messagebox
+import ctypes
 
 def addCaseComment(sf_link="",comment=""):
     user = os.getlogin()
@@ -37,7 +39,6 @@ def addCaseComment(sf_link="",comment=""):
         sf.CaseComment.create(case_comment)
         messagebox.showinfo("Information", "Comment Added Successfully :)")
 
-
 def statusToEIPP(sf_link=""):
     user = os.getlogin()
     data_folder = r"C:\\Users\\%s\\AppData\\Roaming\\PKaser" %user
@@ -66,6 +67,33 @@ def statusToEIPP(sf_link=""):
     case_comment = {'ParentId': parentId, 'IsPublished': False, 'CommentBody': "Sent Case To EIPP."}
     sf.CaseComment.create(case_comment)
 
+def commentCallReviewCompleted(sf_link=""):
+    user = os.getlogin()
+    data_folder = r"C:\\Users\\%s\\AppData\\Roaming\\PKaser" %user
+    data_file = data_folder+"\\config.txt"
+    config = configparser.ConfigParser()
+    config.read(data_file)
+    username = config.get('credentials','username')
+    organizationId = config.get('credentials','organizationId')
+    session = requests.Session()
+    
+    sf_link = sf_link 
+    parentId = sf_link.split('/')[-1]
+    if 'lightning' in parentId:
+        parentId = sf_link.split('/')[6]
+
+    sf = Salesforce(
+        username= username,
+        password=keyring.get_password("pkaser-userinfo", username),
+        security_token=keyring.get_password("pkaser-token", username),
+        organizationId=organizationId,
+        session=session,
+
+    )
+    params = {'Lifecycle_Status__c': 'Peer Review'}
+    sf.Case.update(parentId,params)
+    case_comment = {'ParentId': parentId, 'IsPublished': False, 'CommentBody': "Case has been reviewed on call with offshore team. Case Ready for ASE/QA Process."}
+    sf.CaseComment.create(case_comment)
 
 def statusToFCI(sf_link=""):
     user = os.getlogin()
@@ -177,7 +205,32 @@ def updateEngineer(sf_link="",bt_eng=""):
     )
     sf.Case.update(parentId,{'Engineer__c': bt_eng})
 
-#updateEngineer('https://billtrust.my.salesforce.com/5001M00001isgRV','Christopher Durham')
+def updateCaseOwner(sf_link="",new_owner=""):
+    new_owner = new_owner
+    user = os.getlogin()
+    data_folder = r"C:\\Users\\%s\\AppData\\Roaming\\PKaser" %user
+    data_file = data_folder+"\\config.txt"
+    config = configparser.ConfigParser()
+    config.read(data_file)
+    username = config.get('credentials','username')
+    organizationId = config.get('credentials','organizationId')
+    session = requests.Session()
+    
+    sf_link = sf_link 
+    parentId = sf_link.split('/')[-1]
+    if 'lightning' in sf_link:
+        parentId = sf_link.split('/')[6]
+
+    sf = Salesforce(
+        username= username,
+        password=keyring.get_password("pkaser-userinfo", username),
+        security_token=keyring.get_password("pkaser-token", username),
+        organizationId=organizationId,
+        session=session,
+
+    )
+    sf.Case.update(parentId,{'Case_Owner_ReAssign_Q__c': new_owner})
+
 
 def codeRollChatterComment(sf_link=""):
     user = os.getlogin()
@@ -204,4 +257,7 @@ def codeRollChatterComment(sf_link=""):
 
     )
     params = {"ParentId": parentId,"Body": "Christopher Durham Case Commmitted. Ready To Roll."}
-    sf.FeedItem.create(params)
+    #sf.FeedItem.create(params)
+    sf.FeedItem.search(params)
+
+#codeRollChatterComment("https://billtrust.my.salesforce.com/5001M00001isgRV")

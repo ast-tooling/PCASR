@@ -59,6 +59,7 @@ class copyFilesWindow:
         for file in self.files:
             print(str(file))
             if isinstance(file,list):
+                print("I'm here in the copy files window!")
                 self.text_insert("Copying " + file[1] + ' Directory\n')
 
                 # If This is a Folder

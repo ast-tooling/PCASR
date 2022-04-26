@@ -10,8 +10,11 @@ import configparser
 import keyring
 import ctypes
 
+
 import create_tool_tip
 from buttonsWrapper import TkinterCustomButton
+from salesforceUpdateCommands import updateEngineer
+from salesForceRequest import getSfUserId
 
 '''Main Class for 'save' window
 Handles requesting user input for pcase information to save for new and 
@@ -105,8 +108,11 @@ class saveDialogWindow:
 
                 self.validateSRD()
                 self.validateSF()
+                # Used to view srd link.
+                print("self.retValidSFLink(): %s"%self.retValidSFLink())
     
-    def takeOwnership(self):
+    def takeOwnership(self, sf_link=""):
+        sf_link = sf_link
         answer = askyesno(title="BT Engineer Please Confirm!",
                         message="Will you be taking ownership of this case?")
         if answer:
@@ -120,8 +126,8 @@ class saveDialogWindow:
                 return nameBuffer.value
             fullName = get_display_name()
             print(fullName)
+            updateEngineer(sf_link,getSfUserId())
        
-        return fullName
     def savePCase(self):
 
         if not os.path.exists(self.data_file):
@@ -152,16 +158,19 @@ class saveDialogWindow:
             if pcase not in data:
                 data[pcase] = case_info
             else:
-                tk.messagebox.showwarning('Error', 'You have already added this case.')
+                data[pcase] = case_info
+                
+
             json_file.close()
             with open(self.data_file,'w') as outfile:
                 json.dump(data,outfile)
 
             self.the_parent.json_data = data
             self.kill_window()
+            self.takeOwnership(sf_link)
             self.the_parent.loadPCases()
             self.the_parent.pcase_list.selection_set(pcase)
-            self.takeOwnership()
+            
 
     def getSFInfo(self,sf_link):
 
@@ -213,6 +222,22 @@ class saveDialogWindow:
             self.sf_tt.setText("SF Link is not a valid website")
             self.stateHandler()
             return False
+    
+    def retValidSFLink(self):
+        url = self.sf_entry.get()
+        if "https://" not in url:
+            url = "https://" + url 
+        if validators.url(url):
+            self.sf_valid.config(text="✔",foreground="#198000")
+            self.sf_tt.setText("SF Link is a valid website")
+            self.stateHandler()
+            return url
+        else:
+            self.sf_valid.config(text="❌",foreground="#b00505") 
+            self.sf_tt.setText("SF Link is not a valid website")
+            self.stateHandler()
+            return False
+  
 
     def validateSRD(self):
         url = self.srd_entry.get()
@@ -237,3 +262,5 @@ class saveDialogWindow:
     def kill_window(self):
         self.the_parent.toplevel.wm_attributes("-disabled",False)
         self.save_window.destroy()
+
+ 
