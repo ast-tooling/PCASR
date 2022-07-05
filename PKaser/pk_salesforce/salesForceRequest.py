@@ -31,11 +31,11 @@ def get_SalesForceReport():
         with open(report_results_temp, 'w') as fp:
             json.dump(report_results, fp)
     except configparser.NoOptionError as e:
-        messagebox.showerror(message='error: "{}"'.format(e))
+        messagebox.showerror(message='Error: get_SalesForceReport(): "{}"'.format(e))
     except json.decoder.JSONDecodeError as e: 
-        messagebox.showerror(message='error: "{}"'.format(e))
-
-
+        messagebox.showerror(message='Error: get_SalesForceReport(): "{}"'.format(e))
+    except Exception as e:
+        messagebox.showerror(message='Error: get_SalesForceReport(): "{}"'.format(e))
 
 
 def load_OpenCases():
@@ -88,7 +88,9 @@ def load_OpenCases():
         
         return openCaseList
     except json.decoder.JSONDecodeError as e:
-        messagebox.showerror(message='error: "{}"'.format(e))
+        messagebox.showerror(message='Error: load_OpenCases(): "{}"'.format(e))
+    except Exception as e:
+        messagebox.showerror(message='Error: load_OpenCases(): "{}"'.format(e))
 
 
 def getQueueId(queue=""):
@@ -159,6 +161,8 @@ def get_openCasesByOwner():
         with open(report_results_temp, 'w') as fp:
             json.dump(report_results, fp)
     except configparser.NoOptionError as e:
-        messagebox.showerror(message='error: "{}"'.format(e))
+        messagebox.showerror(message='Error: get_openCasesByOwner(): "{}"'.format(e))
     except json.decoder.JSONDecodeError as e: 
-        messagebox.showerror(message='error: "{}"'.format(e))
+        messagebox.showerror(message='Error: get_openCasesByOwner(): "{}"'.format(e))
+    except Exception as e:
+        messagebox.showerror(message='Error: get_openCasesByOwner(): "{}"'.format(e))

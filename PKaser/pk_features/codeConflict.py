@@ -1,5 +1,6 @@
-from salesForceRequest import *
+from pk_salesforce.salesForceRequest import *
 from tkinter import messagebox
+
 def find_OpenCases(csr_name, current_pcase):
 
     get_SalesForceReport()

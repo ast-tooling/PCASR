@@ -1,7 +1,10 @@
+from cProfile import label
 from json.decoder import JSONDecodeError
 import tkinter as tk
 import subprocess
+import multiprocessing
 from tkinter import ttk
+import tkinter
 import webbrowser
 import os
 import datetime
@@ -30,20 +33,20 @@ from PIL import ImageTk, Image
 
 
 # local imports
-import save_dialog_window
-import file_picker_window
-import copy_files_window
-import about_window
-
-from buttonsWrapper import TkinterCustomButton
-from codeConflict import *
-from salesforceUpdateCommands import addCaseComment, statusToCheckedIn, statusToEIPP, statusToFCI, commentCallReviewCompleted
-from winMergeU import *
-import timeTracker
+import pk_features.save_dialog_window as save_dialog_window
+import pk_popouts.file_picker_window as file_picker_window
+import pk_popouts.copy_files_window as copy_files_window
+import pk_popouts.about_window as about_window
+import pk_features.pk_options as pk_options
+import pk_popouts.roll_schedule as roll_schedule
+from pk_wrappers.buttonsWrapper import TkinterCustomButton
+from pk_features.codeConflict import *
+from pk_salesforce.salesforceUpdateCommands import addCaseComment, statusToCheckedIn, statusToEIPP, statusToFCI, commentCallReviewCompleted
+from pk_features.winMergeU import *
+import pk_features.timeTracker as timeTracker
 
 
 '''The Main Class of the project.  
-
 This both creates the UI for the window and 
 drives the logic.
 '''
@@ -75,6 +78,7 @@ class PCaser:
         self.__file__ = None
         self.__firstStartUp = True
         self.first_init = True
+        self.b_opt_file_exists = pk_options.checkOptFileExists()
         
         user = os.getlogin()
         data_folder = r"C:\\Users\\%s\\AppData\\Roaming\\PKaser" %user
@@ -118,6 +122,7 @@ class PCaser:
         self.initNotePadTextArea()
         self.initBrandingFrame()
         self.initPcaseSearchFrame()
+        #self.initOptionsFrame()
 
         # Populate the ListBox with PCases
         try:
@@ -130,26 +135,26 @@ class PCaser:
         # Select the first listbox item if there is one
         try:
             with open(self.getLastSelectedFile()) as f:
-                index = int(f.readline())
+                try:
+                    index = int(f.readline())
+
+                except ValueError as e:
+                    tk.messagebox.showerror(message='Error: Value in last-selected.txt maybe NULL: "{}"'.format(e))
             topSelect = topSelect = self.pcase_list.get_children()[index]
             self.pcase_list.selection_set(topSelect)
-            today_date = timeTracker.get_today_date()
+            #today_date = timeTracker.get_today_date()
             last_selected = "SMILE-ITS_A-NEW-DAY"
             currently_selected = "%s_%s"%(self.pcase_list.item(topSelect)['values'][0],self.pcase_list.item(topSelect)['values'][1])
             
             timeTracker.update_time(currently_selected,last_selected)
             d_time_tracking = timeTracker.load_times()
-            timeTracker.calculate_times(d_time_tracking)
-
-            self.updateInfo(self.pcase_list.item(topSelect)['values'],self.json_data)
-            self.updateInfoBox(self.pcase_list.item(topSelect)['values'],self.json_data)
-
+            timeTracker.calculate_times(d_time_tracking)        
         except IndexError:
             try:
                 topSelect = topSelect = self.pcase_list.get_children()[0]
                 self.pcase_list.selection_set(topSelect)
 
-                today_date = timeTracker.get_today_date()
+                #today_date = timeTracker.get_today_date()
                 last_selected = "SMILE-ITS_A-NEW-DAY"
                 currently_selected = "%s_%s"%(self.pcase_list.item(topSelect)['values'][0],self.pcase_list.item(topSelect)['values'][1])
                 
@@ -157,8 +162,6 @@ class PCaser:
                 d_time_tracking = timeTracker.load_times()
                 timeTracker.calculate_times(d_time_tracking)
 
-                self.updateInfo(self.pcase_list.item(topSelect)['values'],self.json_data)
-                self.updateInfoBox(self.pcase_list.item(topSelect)['values'],self.json_data)
             except IndexError:
                 pass
 
@@ -201,18 +204,14 @@ class PCaser:
             self.__saveOnSelect__(currentFileName,currentTextArea)    
         self.toplevel.destroy()
 
-    def c(self):
-        self.ftpList = tk.Listbox(self.ftp_root_frame,height=5,width=65)
-        self.ftpList.pack(fill=tk.BOTH)
-    
 
-       
     def initMainFrame(self):
         self.mainwindow = tk.Tk()
-        self.mainwindow.title("The PKaser v2.4")
+        self.mainwindow.title("The PKaser v2.5")
         self.mainwindow.resizable(height=None,width=None)
         self.mainwindow.geometry('%dx%d+%d+%d' % (1510, 750, 1200, 0))
         self.mainwindow.maxsize(1500, 730)
+        
         self.mainwindow.grid_rowconfigure(0, weight=1)
         self.mainwindow.grid_columnconfigure(0, weight=1)
         self.toplevel = self.mainwindow.winfo_toplevel()
@@ -358,22 +357,17 @@ class PCaser:
 
         self.tab_area.add(self.tab_1,text="PCase Folder")
         self.tab_area.add(self.tab_2,text="Time Tracker")
-        self.tab_area.add(self.tab_3,text="Edit/Push/Diff")
+        self.tab_area.add(self.tab_3,text="Edit/Push/Diff/Opts")
         self.tab_area.pack(expand=1,fill="both")
-
-
-        # Tab 2 - Time Tracker
-
   
-        # Tab 3 - Edit/Push Area
+        # Tab 3 - Edit/Push/Diff/Opts Windows
         self.top_frame = ttk.LabelFrame(self.tab_3)
-        self.bot_frame = ttk.LabelFrame(self.tab_3,text="PKaser Options")
+        self.opts_frame = ttk.LabelFrame(self.tab_3,text="PKaser Options")
 
         self.top_frame.pack(ipady=5,ipadx=5,padx=5)
-        self.bot_frame.pack(ipady=5,ipadx=5,padx=5,expand=True,fill='both')
+        self.opts_frame.pack(ipady=5,ipadx=5,padx=5,expand=True,fill='both')
 
-        # Top Half
-
+        #  start - Top Half -  Edit/Push/Diff 
         # Buttons
         self.editTemplateButton = ttk.Button(self.top_frame, text="Edit",command=self.editTemplates)
         #self.button1 = TkinterCustomButton(master=self.top_frame,text="Edit",bg_color="#e6e6e6",fg_color="#e6e6e6",corner_radius=10,text_color="white",hover_color="#53ba65",width=65,height=20,command=self.editTemplates)
@@ -400,15 +394,14 @@ class PCaser:
         self.diffReleaseButton = ttk.Button(self.top_frame, text="Diff", command=self.diffReleaseBin)
         self.blankButton = ttk.Button(self.top_frame)
 
-        # Labels
+        # Labels - Top Half -  Edit/Push/Diff 
         self.templateLabel = ttk.Label(self.top_frame,text="Templates")
         self.parserLabel = ttk.Label(self.top_frame,text="ParserConfig")
         self.scriptLabel = ttk.Label(self.top_frame,text="Script")
         self.sampleDataLabel = ttk.Label(self.top_frame,text="SampleData")
         self.releaseBinLabel = ttk.Label(self.top_frame,text="ReleaseBin")
 
-
-        # Grid Everything
+        # Grid Everything - Top Half -  Edit/Push/Diff 
         self.editTemplateButton.grid(row=1,column=1)
         self.editParserButton.grid(row=2,column=1)
         self.editScriptButton.grid(row=3,column=1)
@@ -429,30 +422,46 @@ class PCaser:
         self.scriptLabel.grid(row=3,column=0)
         self.sampleDataLabel.grid(row=4,column=0)
         self.releaseBinLabel.grid(row=5,column=0)
-
-        # Bottom Half
-        self.bot_frame.grid_propagate(1)
+        #  end  - Top Half -  Edit/Push/Diff
 
 
-        # Radio buttons
-        #self.radio_var = tk.IntVar()
-        #self.radio1 = tk.Radiobutton(self.bot_frame,text="Stack 1",variable=self.radio_var, value=0,command=self.setServerList)
-        #self.radio2 = tk.Radiobutton(self.bot_frame,text="Stack 2",variable=self.radio_var, value=1,command=self.setServerList)
-        #self.radio3 = tk.Radiobutton(self.bot_frame,text="Both",variable=self.radio_var, value=2,command=self.setServerList)
+        # Bottom Half - Opts
+    
+        self.opts_frame.grid_propagate(1)
 
-        # Buttons
+        self.jobTitleLabel = Label(self.opts_frame, text="Job Title")
+        self.jobclicked = StringVar()
+        self.trackTimeLabel = Label(self.opts_frame, text="Track Time")
+        self.trackTimeClicked = StringVar()
 
-        #self.push_all_button = ttk.Button(self.bot_frame,text="Push Everything",width=25,command=self.pushEverything)
+        if not self.b_opt_file_exists:
+            print("if not self.b_opt_file_exists")
+            self.jobclicked.set(pk_options.jobTitles()[0])
+            self.trackTimeClicked.set(pk_options.trackTimeOpts()[0])
+            self.jobTitleMenu = OptionMenu(self.opts_frame, self.jobclicked, *pk_options.jobTitles(), command=pk_options.getjobTitle)
+            self.trackTimeMenu = OptionMenu(self.opts_frame, self.trackTimeClicked, *pk_options.trackTimeOpts(), command=pk_options.getTrackTimeValue)
+            pk_options.createOptFile()
 
-        # Grid Everything
-        self.bot_frame.grid_columnconfigure(0,weight=2)
-        self.bot_frame.grid_columnconfigure(1,weight=1)
+        elif self.b_opt_file_exists:
+            print("elif self.b_opt_file_exists")
+            opts = pk_options.loadOptFile()
+            jobTitle = opts["JOB_TITLE"]
+            trackTime = opts["TRACK_TIME"]
+            self.jobclicked.set(jobTitle)
+            self.trackTimeClicked.set(trackTime)
+            self.jobTitleMenu = OptionMenu(self.opts_frame, self.jobclicked, *pk_options.jobTitles(), command=pk_options.getjobTitle)
+            self.trackTimeMenu = OptionMenu(self.opts_frame, self.trackTimeClicked, *pk_options.trackTimeOpts(),command=pk_options.getTrackTimeValue)
 
-        self.bot_frame.grid_rowconfigure(0,weight=1)
-        self.bot_frame.grid_rowconfigure(1,weight=1)
-        self.bot_frame.grid_rowconfigure(2,weight=1)
 
-   
+
+
+        self.jobTitleLabel.grid(row=1,column=1)
+        self.jobTitleMenu.grid(row=1,column=2)
+        self.trackTimeLabel.grid(row=2,column=1)
+        self.trackTimeMenu.grid(row=2, column=2)
+        self.trackTimeMenu.configure(state='disabled')
+
+
 
     def initTreeView(self):
          # Tab Definitions
@@ -641,7 +650,7 @@ class PCaser:
         self.tool_menu        = Menu(self.menu_bar, tearoff=0)
         self.help_menu        = Menu(self.menu_bar, tearoff=0)
         self.sf_menu          = Menu(self.menu_bar, tearoff=0)
-        self.ts_menu        = Menu(self.menu_bar, tearoff=0)
+        self.ts_menu          = Menu(self.menu_bar, tearoff=0)
         self.right_click_menu = Menu(self.mainwindow, tearoff=0)
 
         # Add Menu Options to Bar
@@ -676,13 +685,13 @@ class PCaser:
         self.tool_menu.add_command(label="Copy SFCase",accelerator="Alt+F", command=self.copySFCase)
         self.tool_menu.add_command(label="Copy PCase_CSRNAME",accelerator="Alt+B",command=self.copyPCaseAndCSRName)
         self.tool_menu.add_command(label="Copy CSRNAME",accelerator="Alt+C",command=self.copyCSRName)
-        self.tool_menu.add_separator()
-        self.tool_menu.add_command(label="Start Timer", command=self.__caseStartTime__)
-        self.tool_menu.add_command(label="End Timer", command=self.__caseEndTime__)
-        self.tool_menu.add_command(label="Total Time", command=self.__totalTimeSpent__)
+        #self.tool_menu.add_separator()
+        #self.tool_menu.add_command(label="Start Timer", command=self.__caseStartTime__)
+        #self.tool_menu.add_command(label="End Timer", command=self.__caseEndTime__)
+        #self.tool_menu.add_command(label="Total Time", command=self.__totalTimeSpent__)
 
         # Add subitems for Update SF OPtion
-        self.sf_menu.add_command(label="Text To Comment",command=lambda: addCaseComment(self.returnParentId(),self.__returnSelectedText__()))
+        self.sf_menu.add_command(label="Text To Comment",command=lambda: addCaseComment(self.returnParentId(),self.__returnSelectedText__())) # lambda:
         self.sf_menu.add_command(label="To-EIPP-Comment", command=self.__sentToEIPP__)
         self.sf_menu.add_command(label="To-FCI-Comment", command=self.__sentToFCI__)
         self.sf_menu.add_command(label="Committed-Comment", command=self.__CaseCommittedNoteStamp__)
@@ -710,25 +719,25 @@ class PCaser:
         # Add 1 - File Menu Subitems
         self.menu_item_1.add_command(label="New",accelerator="Ctrl+N",command=self.newWindow)
         self.menu_item_1.add_command(label="UnArchive",command=self.unArchiveCase)
-        self.menu_item_1.add_command(label="Delete",command=self.deleteCase)
         self.menu_item_1.add_separator()
         self.menu_item_1.add_command(label="Quit",accelerator="Ctrl+Q",command=self.force_kill_window)
 
         # Add 2- Edit Menu Subitems
         self.menu_item_2.add_command(label="Change PCase Details",command=self.editWindow)
-        self.menu_item_2.add_command(label="Preferences")
+        self.menu_item_2.add_command(label="Save Pkaser Options")
 
         # Add 3- Tools Menu Subitems
-        #self.menu_item_3.add_command(label="SVN Sync",command=lambda: self.openApplication(data_folder +"\\other-programs\\SVNSync-Utility\\main.exe"))
         self.menu_item_3.add_command(label="Exif Tool",command=lambda: self.openApplication("Z:\\AST\\Utilities\\exif_tool\\exif_tool.bat"))
         self.menu_item_3.add_command(label="Diff Pdf",command=lambda: self.openApplication("Z:\\AST\\DiffPDF\\DiffpdfPortable\\DiffpdfPortable.exe"))
         self.menu_item_3.add_command(label="Parseamajig",command=lambda: self.openApplication("Z:\\AST\\Utilities\\Parseamajig\\Parseamajig.exe"))
         self.menu_item_3.add_command(label="XMLGenerator",command=lambda: self.openApplication("Z:\\AST\\Utilities\\XMLGenerator\\XmlGenerator.exe"))
         self.menu_item_3.add_command(label="BillGen Wrapper",command=lambda: self.openApplication("Z:\\AST\\Utilities\\BillGen\\BillGenWrapper.exe"))
+        self.menu_item_3.add_command(label="PrePost Compare",command=lambda: self.openWebsite("http://ssnj-devast01/prepost#"))
                 
         # Add 4- Help Menu Subitems
         self.menu_item_4.add_command(label="About", command=lambda:about_window.aboutWindow(self))
         self.menu_item_4.add_command(label="Confluence Page",command=lambda: self.openWebsite("https://billtrust.atlassian.net/wiki/spaces/AT/pages/29252616317/PKaser+FAQ+Page"))
+        self.menu_item_4.add_command(label="Roll Schedule", command=lambda: roll_schedule.roll_schedule())
 
 
         #self.right_click_menu.add_command(label="Quick Comment")
@@ -1106,6 +1115,7 @@ class PCaser:
         iconPhotoImage = tk.PhotoImage(file = appIcon_file)
 
         self.mainwindow.iconphoto(False,iconPhotoImage)
+        #self.mainwindow.attributes('-fullscreen',True)
         self.mainwindow.mainloop()
         
     '''Loads 'Quick View' PCase treeview
@@ -1221,7 +1231,7 @@ class PCaser:
             elif fileType == ".py":
                 astFolder_path = "C:\\AST\\scripts\\"
             elif fileType == "":
-                astFolder_path = "\\VC\\Release\\Bin"
+                astFolder_path = "\\AST\\ReleaseBin\\"
 
             files = self.filesInDir(subFolder_path,fileType)
 
@@ -1380,7 +1390,7 @@ class PCaser:
 
         self.conflicts = find_OpenCases(self.getCustString(), self.getPCaseString())
         #print(self.conflicts)
-        conflicts = self.conflicts
+        conflicts = target=self.conflicts
         
 
         # Define Tree
@@ -1493,6 +1503,8 @@ class PCaser:
                     self.conflictTree.insert(parent='', index='end', iid=rowCount, text="CURRENTLY NO CONCLICTS",tags=('no-conflict',))
                     rowCount += 1
         self.conflictTree.grid(row=1, column=0)
+
+
 
     def rightClickMenu(self, event):
         try:
@@ -1639,7 +1651,6 @@ class PCaser:
 
     def openApplication(self,path):
         try:
-            tk.messagebox.showinfo('Just a Second...', 'This can take a minute to open, please be patient.')
             os.startfile(path)
         except:
             tk.messagebox.showwarning('Error', 'You must be connected to the VPN to open this.')
@@ -1655,7 +1666,6 @@ class PCaser:
             call(["python", file])
         except:
             tk.messagebox.showinfo('You need python installed and in your path file to open this.')
-
 
 
 class PKaseNotesFuctions(PCaser):
@@ -1881,8 +1891,16 @@ class PKaseNotesFuctions(PCaser):
     
 
     def __returnSelectedText__(self):
-        selectedText = self.text_area.selection_get()
-        return selectedText
+        try:
+            selectedText = self.text_area.selection_get()
+            return selectedText
+        except tkinter.TclError:
+            error_message = "No text Selected! Make sure you highlight the text you want to add as a comment."
+            tk.messagebox.showerror(message='Error: "{}"'.format(error_message))
+            return None
+
+
+
         
 
         

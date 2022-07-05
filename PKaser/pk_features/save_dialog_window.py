@@ -11,10 +11,11 @@ import keyring
 import ctypes
 
 
-import create_tool_tip
-from buttonsWrapper import TkinterCustomButton
-from salesforceUpdateCommands import updateEngineer
-from salesForceRequest import getSfUserId
+import pk_popouts.create_tool_tip as create_tool_tip
+import pk_features.pk_options as pk_options
+from pk_wrappers.buttonsWrapper import TkinterCustomButton
+from pk_salesforce.salesforceUpdateCommands import updateEngineer
+from pk_salesforce.salesForceRequest import getSfUserId
 
 '''Main Class for 'save' window
 Handles requesting user input for pcase information to save for new and 
@@ -98,6 +99,9 @@ class saveDialogWindow:
         self.data_folder = "C:\\Users\\%s\\AppData\\Roaming\\PKaser" %user
         self.data_file = self.data_folder+"\\nt-json-files\\pkaser.json"
 
+
+
+
         # If pcase already exists in data, load and validate
         if edit:
             data = self.the_parent.json_data
@@ -112,8 +116,12 @@ class saveDialogWindow:
                 print("self.retValidSFLink(): %s"%self.retValidSFLink())
     
     def takeOwnership(self, sf_link=""):
+        # Set User Type
+        opts = pk_options.loadOptFile()
+        job_title = opts["JOB_TITLE"]
+
         sf_link = sf_link
-        answer = askyesno(title="BT Engineer Please Confirm!",
+        answer = askyesno(title="Please Confirm!",
                         message="Will you be taking ownership of this case?")
         if answer:
             def get_display_name(): # https://stackoverflow.com/questions/21766954/how-to-get-windows-users-full-name-in-python
@@ -126,7 +134,7 @@ class saveDialogWindow:
                 return nameBuffer.value
             fullName = get_display_name()
             print(fullName)
-            updateEngineer(sf_link,getSfUserId())
+            updateEngineer(sf_link,getSfUserId(),job_title)
        
     def savePCase(self):
 

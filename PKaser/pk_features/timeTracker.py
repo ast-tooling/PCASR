@@ -6,7 +6,6 @@ import json
 import os
 
 
-
 user = os.getlogin()
 data_folder = r"C:\\Users\\%s\\AppData\\Roaming\\PKaser" %user
 tracker_file =data_folder + "\\nt-json-files\\ttimes_stored.json"

@@ -1,4 +1,3 @@
-import ctypes
 from requests.sessions import cookiejar_from_dict
 from simple_salesforce import Salesforce, SalesforceLogin
 import configparser
@@ -7,9 +6,10 @@ import os
 import requests
 from tkinter import * 
 from tkinter import messagebox
-import ctypes
 
 def addCaseComment(sf_link="",comment=""):
+    print(type(comment))
+    print(comment)
     user = os.getlogin()
     data_folder = r"C:\\Users\\%s\\AppData\\Roaming\\PKaser" %user
     data_file = data_folder+"\\config.txt"
@@ -35,9 +35,11 @@ def addCaseComment(sf_link="",comment=""):
     )
     
     case_comment = {'ParentId': parentId, 'IsPublished': False, 'CommentBody': comment}
-    if comment != "":
+
+    if comment is not None:
         sf.CaseComment.create(case_comment)
         messagebox.showinfo("Information", "Comment Added Successfully :)")
+
 
 def statusToEIPP(sf_link=""):
     user = os.getlogin()
@@ -179,7 +181,7 @@ def statusToCheckedIn(sf_link=""):
     case_comment = {'ParentId': parentId, 'IsPublished': False, 'CommentBody': "Case Committed. Ready To Roll!"}
     sf.CaseComment.create(case_comment)
 
-def updateEngineer(sf_link="",bt_eng=""):
+def updateEngineer(sf_link="",bt_eng="",job_title= "AST ENG"):
     bt_eng = bt_eng
     user = os.getlogin()
     data_folder = r"C:\\Users\\%s\\AppData\\Roaming\\PKaser" %user
@@ -201,9 +203,12 @@ def updateEngineer(sf_link="",bt_eng=""):
         security_token=keyring.get_password("pkaser-token", username),
         organizationId=organizationId,
         session=session,
-
     )
-    sf.Case.update(parentId,{'Engineer__c': bt_eng})
+    if "AST ENG" == job_title:
+        sf.Case.update(parentId,{'Engineer__c': bt_eng})
+    elif "AST QA" == job_title:
+        sf.Case.update(parentId,{'QA_Analyst__c': bt_eng})
+
 
 def updateCaseOwner(sf_link="",new_owner=""):
     new_owner = new_owner
@@ -227,9 +232,8 @@ def updateCaseOwner(sf_link="",new_owner=""):
         security_token=keyring.get_password("pkaser-token", username),
         organizationId=organizationId,
         session=session,
-
     )
-    sf.Case.update(parentId,{'Case_Owner_ReAssign_Q__c': new_owner})
+    sf.Case.update(parentId,{'ChangeCaseOwner__Case_Owner_Change': new_owner})
 
 
 def codeRollChatterComment(sf_link=""):

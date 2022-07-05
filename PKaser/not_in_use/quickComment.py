@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import *
 import os
-from buttonsWrapper import TkinterCustomButton
+from pk_wrappers.buttonsWrapper import TkinterCustomButton
 
 def QuickCommment():
 

@@ -9,10 +9,10 @@ from tkinter import font
 
 
 # local Imports
-import file_picker_window
-from winMergeU import *
+import pk_popouts.file_picker_window as file_picker_window
+from pk_features.winMergeU import *
 from pkaser import *
-import copy_files_window
+import pk_popouts.copy_files_window as copy_files_window
 
 ''' Returns a list of the files in a given directory, optionally of a specified file type.
 
