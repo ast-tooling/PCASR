@@ -1,4 +1,4 @@
-from cProfile import label
+#from cProfile import label
 from json.decoder import JSONDecodeError
 import tkinter as tk
 import subprocess
@@ -9,7 +9,6 @@ import webbrowser
 import os
 import datetime
 import re
-import threading
 import json
 from simple_salesforce import Salesforce
 import configparser
@@ -34,16 +33,22 @@ from PIL import ImageTk, Image
 
 # local imports
 import pk_features.save_dialog_window as save_dialog_window
+import pk_features.change_pcase_details_window as change_pcase_details_window
 import pk_popouts.file_picker_window as file_picker_window
 import pk_popouts.copy_files_window as copy_files_window
 import pk_popouts.about_window as about_window
 import pk_features.pk_options as pk_options
 import pk_popouts.roll_schedule as roll_schedule
+import pk_features.timeTracker as timeTracker
+import pk_salesforce.salesforceUpdateCommands as sfCase
+
+import pk_multiprocessing.pk_process as pk_process
 from pk_wrappers.buttonsWrapper import TkinterCustomButton
 from pk_features.codeConflict import *
-from pk_salesforce.salesforceUpdateCommands import addCaseComment, statusToCheckedIn, statusToEIPP, statusToFCI, commentCallReviewCompleted
+
 from pk_features.winMergeU import *
-import pk_features.timeTracker as timeTracker
+
+
 
 
 '''The Main Class of the project.  
@@ -96,7 +101,6 @@ class PCaser:
         
         self.setDataFolder(data_folder)
         self.setDataFile(data_file)
-        self.setArchiveFile(archive_file)
         self.setAppIconFile(appIcon_file)
         self.setBrandingImage(branding_image_file)
         self.setConfigFile(config_file)
@@ -114,7 +118,6 @@ class PCaser:
         self.initMenuBar()
         self.initInfoFrame()
         self.initQuickButtons()
-        #self.initFTPFrame()
         self.initTabArea()
         self.initTreeView()
         self.initCodeConflictFrame()
@@ -122,16 +125,14 @@ class PCaser:
         self.initNotePadTextArea()
         self.initBrandingFrame()
         self.initPcaseSearchFrame()
-        #self.initOptionsFrame()
 
         # Populate the ListBox with PCases
         try:
             self.loadPCases()
-            self.loadArchive()
         except JSONDecodeError:
             pass
 
-        self.watching = False
+        #self.watching = False
         # Select the first listbox item if there is one
         try:
             with open(self.getLastSelectedFile()) as f:
@@ -207,10 +208,10 @@ class PCaser:
 
     def initMainFrame(self):
         self.mainwindow = tk.Tk()
-        self.mainwindow.title("The PKaser v2.5")
+        self.mainwindow.title("The PKaser v2.6")
         self.mainwindow.resizable(height=None,width=None)
         self.mainwindow.geometry('%dx%d+%d+%d' % (1510, 750, 1200, 0))
-        self.mainwindow.maxsize(1500, 730)
+        self.mainwindow.maxsize(1492, 730)
         
         self.mainwindow.grid_rowconfigure(0, weight=1)
         self.mainwindow.grid_columnconfigure(0, weight=1)
@@ -286,16 +287,17 @@ class PCaser:
         self.search_button = TkinterCustomButton(master=self.search_frame,text="Search ",corner_radius=5,bg_color="#ffffcc",fg_color="#003035",text_color="white",hover_color="#53ba65",width=85,height=23,command=self.search_pcase_list)
         self.search_button.grid(row=0,column=1,padx=10)
         self.search_box_entry.grid(row=0,column=0)
+
     def search_pcase_list(self):
 
         pcase_file = self.getDataFile()
-        search = self.search_box_entry.get().upper()
+        search = self.search_box_entry.get().strip().upper()
         # building out current cases list
         with open(pcase_file) as json_file:
             data = json.load(json_file)    
         current_cases = []
         for case in data:
-            current_case = [data[case]['pcase'],data[case]['cust_name']]
+            current_case = [data[case]['pcase'],data[case]['cust_name'],data[case]['case_number']]
             current_cases.append(current_case)
 
         x_cases = []
@@ -332,10 +334,6 @@ class PCaser:
         self.branding_image.pack()
 
     def initTabArea(self):
-        # Put a Space in Before The Tab Area for Visual Cleanliness
-        #self.space_label = tk.Label(self.tab_frame)
-        #self.space_label.pack()
-        # Remove Ugly Dotted Lines From Selected Tabs
         self.style = ttk.Style()
         self.style.layout("Tab",
         [('Notebook.tab', {'sticky': 'nswe', 'children':
@@ -454,7 +452,6 @@ class PCaser:
 
 
 
-
         self.jobTitleLabel.grid(row=1,column=1)
         self.jobTitleMenu.grid(row=1,column=2)
         self.trackTimeLabel.grid(row=2,column=1)
@@ -463,22 +460,16 @@ class PCaser:
 
 
 
+
     def initTreeView(self):
          # Tab Definitions
-        self.pcase_tab_area = ttk.Notebook(self.pcase_list_frame2,width=250,height=650)
-        #self.pcase_tab_area.bind('<<NotebookTabChanged>>', self.on_tab_change)
 
-        self.current_tab = tk.Frame(self.pcase_tab_area)
-        self.archive_tab = tk.Frame(self.pcase_tab_area)
-
-        self.pcase_tab_area.add(self.current_tab,text="            Current            ")
-        self.pcase_tab_area.add(self.archive_tab,text="            Archive            ")
-
+        self.pcase_tab_area = ttk.Frame(self.pcase_list_frame2,width=245,height=650)
 
         # Define active tab contents
         columns=["PCase","CSR Name"]
-
-        self.pcase_list = ttk.Treeview(self.current_tab,height=31,columns=columns,show="headings")
+        #self.pcase_list = ttk.Treeview(self.current_tab,height=31,columns=columns,show="headings")
+        self.pcase_list = ttk.Treeview(self.pcase_tab_area,height=34,columns=columns,show="headings")
         self.veritcalScrollbar = ttk.Scrollbar(self.pcase_list_frame2, orient='vertical',command=self.pcase_list.yview)
         self.pcase_list['yscrollcommand'] = self.veritcalScrollbar.set
         self.veritcalScrollbar.grid(row=0,column=3,sticky='ns')
@@ -496,37 +487,12 @@ class PCaser:
 
         self.pcase_list.grid(row=0,column=0)
 
-        # Define archive tab contents
-        columns=["PCase","CSR Name"]#,"Date Created"]
-        self.archive_list = ttk.Treeview(self.archive_tab,height=31,columns=columns,show="headings")
-        self.archive_list.bind('<<TreeviewSelect>>',self.archiveSelect)
-
-        self.archive_list.column('PCase',width=78,stretch=False,minwidth=78)
-        self.archive_list.column('CSR Name',width=163,stretch=False,minwidth=100)
-
-        self.archive_list.heading('PCase',text="PCase")
-        self.archive_list.heading('CSR Name',text="CSR Name")
-
-        # Enable sorting
-        for col in columns:
-            self.archive_list.heading(col,command=lambda _col=col: self.treeview_sort_column(_col, False,self.archive_list))
-
-        self.archive_list.grid(row=0,column=0)
-        
-
         # Add function buttons
-        #self.update_button = ttk.Button(self.pcase_list_frame2,text='Update',width=10,command=self.editWindow)
         self.update_button = TkinterCustomButton(master=self.pcase_list_frame2,text='Update',bg_color="#ffffcc",fg_color="#003035",corner_radius=5,text_color="white",hover_color="#53ba65",width=80,height=24,command=self.editWindow)
-        #self.new_button = ttk.Button(self.pcase_list_frame2,text='New',width=10,command=self.newWindow)
         self.new_button = TkinterCustomButton(master=self.pcase_list_frame2,text='New',bg_color="#ffffcc",fg_color="#003035",corner_radius=5,text_color="white",hover_color="#53ba65",width=80,height=24,command=self.newWindow)
-        #self.archive_button = ttk.Button(self.pcase_list_frame2,text='Archive',width=10,command=self.archiveCase)
-        self.archive_button = TkinterCustomButton(master=self.pcase_list_frame2,text='Archive',bg_color="#ffffcc",fg_color="#003035",corner_radius=5,text_color="white",hover_color="#53ba65",width=80,height=24,command=self.archiveCase)
-        
+    
         # Add items to frame
         self.pcase_tab_area.grid(row=0,column=0,columnspan=3)
-        self.new_button.grid(row=1,column=0,padx=1)
-        self.update_button.grid(row=1,column=1,padx=1)
-        self.archive_button.grid(row=1,column=2,padx=1,pady=2)
 
 
 
@@ -534,13 +500,9 @@ class PCaser:
     def initQuickButtons(self):
 
         self.quick_button_frame.grid_propagate(True)
-
         self.pcase_button = TkinterCustomButton(master=self.quick_button_frame,text="PCase",bg_color="#ffffcc",fg_color="#003035",corner_radius=5,text_color="white",hover_color="#53ba65",width=90,height=24,command=lambda: self.openDir("Z:\\IT Documents\\QA\\" + self.getPCaseString()))
-
         self.srd_button = TkinterCustomButton(master=self.quick_button_frame,text="SRD",bg_color="#ffffcc",fg_color="#003035",corner_radius=5,text_color="white",hover_color="#53ba65",width=90,height=24,command=lambda: self.openWebsite(self.json_data[self.getPCaseString()]['srd_link']))
-
-        self.ftp_root_button = TkinterCustomButton(master=self.quick_button_frame,text="FTP Root",bg_color="#ffffcc",fg_color="#003035",corner_radius=5,text_color="white",hover_color="#53ba65",width=90,height=24,command=lambda: self.openDir("\\\\ssnj-netapp01\\imtest\\imstage01\\ftproot\\"+self.getCustString() ))
- 
+        self.ftp_root_button = TkinterCustomButton(master=self.quick_button_frame,text="FTP Root",bg_color="#ffffcc",fg_color="#003035",corner_radius=5,text_color="white",hover_color="#53ba65",width=90,height=24,command=lambda: self.openDir("\\\\ssnj-isilon02\\imtest\\imstage01\\ftproot\\"+self.getCustString() ))
         self.sf_button = TkinterCustomButton(master=self.quick_button_frame,text="SalesForce",bg_color="#ffffcc",fg_color="#003035",corner_radius=5,text_color="white",hover_color="#53ba65",width=110,height=24,command=lambda: self.openWebsite(self.json_data[self.getPCaseString()]['sf_link']))
 
 
@@ -587,16 +549,7 @@ class PCaser:
             sf_current_case_owner = data[pcase]['case_owner']
             sf_csrname = data[pcase]['cust_name']
         except KeyError:
-            index = self.archive_list.selection()
-            values= self.archive_list.item(index)['values']
-            pcase = values[0]
-            sf_case_sub = data[pcase]['subject']
-            sf_pcase_number = data[pcase]['pcase']
-            sf_case_number = data[pcase]['case_number']
-            sf_last_modified = data[pcase]['last_modified'].split('.')[0][:-3].replace('T'," ")
-            sf_parent_case_owner = data[pcase]['parent_case_owner']
-            sf_current_case_owner = data[pcase]['case_owner']
-            sf_csrname = data[pcase]['cust_name']
+            print("UpdateInfoBox Key Error. Need to fix this part.")
 
 
 
@@ -651,7 +604,7 @@ class PCaser:
         self.help_menu        = Menu(self.menu_bar, tearoff=0)
         self.sf_menu          = Menu(self.menu_bar, tearoff=0)
         self.ts_menu          = Menu(self.menu_bar, tearoff=0)
-        self.right_click_menu = Menu(self.mainwindow, tearoff=0)
+        
 
         # Add Menu Options to Bar
         self.menu_bar.add_cascade(label="PKaser Options:")
@@ -667,11 +620,17 @@ class PCaser:
         self.menu_bar.add_cascade(label="Update SF", menu=self.sf_menu)
         self.menu_bar.add_cascade(label="Timestamps", menu=self.ts_menu)
 
+        # Additional Menu Options
+        self.right_click_menu_notepad = Menu(self.mainwindow, tearoff=0)
+        self.right_click_menu_pcase_folder = Menu(self.mainwindow, tearoff=0)
+
+
 
         # Add subitems for File Option
         data_folder = self.getDataFolder()
         user = os.getlogin()
         self.file_menu.add_command(label="Open PCase ♫'s Directory",command=lambda: self.openDir("C:\\Users\\%s\\Documents\\pcasenotes" %user))
+        self.file_menu.add_command(label="Search PCase ♫'s Directory",command=lambda:self.openApplication("Z:\\AST\\Utilities\\FindAndReplace\\fnr\\fnr.exe"))
         # Add subitems for Edit Option
         self.edit_menu.add_command(label="Undo",accelerator="Ctrl+Z",command=self.__undo__)
         self.edit_menu.add_command(label="Redo",accelerator="Ctrl+Y",command=self.__redo__)
@@ -685,23 +644,24 @@ class PCaser:
         self.tool_menu.add_command(label="Copy SFCase",accelerator="Alt+F", command=self.copySFCase)
         self.tool_menu.add_command(label="Copy PCase_CSRNAME",accelerator="Alt+B",command=self.copyPCaseAndCSRName)
         self.tool_menu.add_command(label="Copy CSRNAME",accelerator="Alt+C",command=self.copyCSRName)
-        #self.tool_menu.add_separator()
-        #self.tool_menu.add_command(label="Start Timer", command=self.__caseStartTime__)
-        #self.tool_menu.add_command(label="End Timer", command=self.__caseEndTime__)
-        #self.tool_menu.add_command(label="Total Time", command=self.__totalTimeSpent__)
-
+        self.tool_menu.add_separator()
+        self.tool_menu.add_command(label="Python Comment",accelerator="Alt+O",command=self.pythonComment)
+        
         # Add subitems for Update SF OPtion
-        self.sf_menu.add_command(label="Text To Comment",command=lambda: addCaseComment(self.returnParentId(),self.__returnSelectedText__())) # lambda:
-        self.sf_menu.add_command(label="To-EIPP-Comment", command=self.__sentToEIPP__)
-        self.sf_menu.add_command(label="To-FCI-Comment", command=self.__sentToFCI__)
+        self.sf_menu.add_command(label="Text To Comment",command=lambda: sfCase.addCaseComment(self.returnParentId(),self.__returnSelectedText__())) # lambda:
+        self.sf_menu.add_command(label="EIPP-Comment", command=self.__sentToEIPP__)
+        self.sf_menu.add_command(label="FCI-Comment", command=self.__sentToFCI__)
         self.sf_menu.add_command(label="Committed-Comment", command=self.__CaseCommittedNoteStamp__)
         self.sf_menu.add_command(label="Reviewed OnCall-Comment", command=self.__callReviewCompleted__)
+        self.sf_menu.add_command(label="Pending Code Review-Comment", command=self.__PendingASECodeReview__)
         
 
         # Add subitems for Timestamp Option
         self.ts_menu.add_command(label="Insert-Timestamp", command=self.__regularNoteStamp__)
+        self.ts_menu.add_command(label="Insert-Slack-Comment", command=self.__checkSlackStamp__)
         self.ts_menu.add_command(label="Insert-SF-Comment", command=self.__salesforceComment__)
         self.ts_menu.add_command(label="Insert-FF-Comment", command=self.__FileFailureComment__)
+  
 
 
 
@@ -718,11 +678,12 @@ class PCaser:
 
         # Add 1 - File Menu Subitems
         self.menu_item_1.add_command(label="New",accelerator="Ctrl+N",command=self.newWindow)
-        self.menu_item_1.add_command(label="UnArchive",command=self.unArchiveCase)
+        #self.menu_item_1.add_command(label="Delete",command=self.deleteCase)
         self.menu_item_1.add_separator()
         self.menu_item_1.add_command(label="Quit",accelerator="Ctrl+Q",command=self.force_kill_window)
 
         # Add 2- Edit Menu Subitems
+        self.menu_item_2.add_command(label="Take Ownership",command=lambda: sfCase.takeOwnership(self.json_data[self.getPCaseString()]['sf_link']))
         self.menu_item_2.add_command(label="Change PCase Details",command=self.editWindow)
         self.menu_item_2.add_command(label="Save Pkaser Options")
 
@@ -733,6 +694,7 @@ class PCaser:
         self.menu_item_3.add_command(label="XMLGenerator",command=lambda: self.openApplication("Z:\\AST\\Utilities\\XMLGenerator\\XmlGenerator.exe"))
         self.menu_item_3.add_command(label="BillGen Wrapper",command=lambda: self.openApplication("Z:\\AST\\Utilities\\BillGen\\BillGenWrapper.exe"))
         self.menu_item_3.add_command(label="PrePost Compare",command=lambda: self.openWebsite("http://ssnj-devast01/prepost#"))
+        self.menu_item_3.add_command(label="Make PCase Dir",command=lambda: self.openApplication("C:\\AST\\utils\\scripts\\case_dir.bat"))
                 
         # Add 4- Help Menu Subitems
         self.menu_item_4.add_command(label="About", command=lambda:about_window.aboutWindow(self))
@@ -767,128 +729,13 @@ class PCaser:
         self.words_file = open(self.getWordsFile()).read().split("\n")
 
         # Right Click Menu Options
-        self.right_click_menu.add_command(label="Text To Comment",command=lambda: addCaseComment(self.returnParentId(),self.__returnSelectedText__()))
+        self.right_click_menu_notepad.add_command(label="Text To Comment",command=lambda: sfCase.addCaseComment(self.returnParentId(),self.__returnSelectedText__()))
+        self.right_click_menu_notepad.add_command(label="Cut",command=self.__cut__)
+        self.right_click_menu_notepad.add_command(label="Copy",command=self.__copy2__)
+        self.right_click_menu_notepad.add_command(label="Paste",command=self.__paste__)
+        self.text_area.bind("<Button-3>", self.rightClickMenuNotePad)
 
-        self.text_area.bind("<Button-3>", self.rightClickMenu)
-
-    def setServerList(self):
-        self.server_list = self.all_servers
-        #if self.radio_var.get() == 2:
-        #    self.server_list = self.all_servers
-        #elif self.radio_var.get() == 1:
-        #    self.server_list = self.all_servers[-2:]
-        #lse:
-        #    self.server_list = self.all_servers[:4] 
-
-
-    def unArchiveCase(self):
-        archive_file = self.getArchiveFile()
-        pcase_file = self.getDataFile()
-
-        pcase = self.getPCaseString()
-        
-        with open(archive_file) as json_file:
-            data = json.load(json_file)
-            self.archive_data = data
-
-        self.json_data[pcase] = self.archive_data[pcase]
-
-        del self.archive_data[pcase]
-
-        self.saveJSON(pcase_file,self.json_data)
-        self.saveJSON(archive_file,self.archive_data)
-
-
-        self.loadPCases()
-        self.loadArchive()
-        previousFileName = "%s_%s.txt"%(self.getPCaseString(),self.getCustString())
-        previousTextArea = self.text_area.get("1.0",END)
-        index = self.pcase_list.selection()
-        values= self.pcase_list.item(index)['values']
-        self.__saveOnSelect__(previousFileName,previousTextArea)
-
-        try:
-            topSelect = self.archive_list.get_children()[0]
-            self.archive_list.selection_set(topSelect)
-            self.updateInfo(self.archive_list.item(topSelect)['values'],self.json_data)
-            self.updateInfoBox(self.archive_list.item(topSelect)['values'],self.json_data)
-            self.__openOnSelect__()
-            #self.threadStart()
-        except:
-           pass
-        
-    def archiveCase(self):
-        archive_file = self.getArchiveFile()
-        pcase_file = self.getDataFile()
-
-        pcase = self.getPCaseString()
-        
-        if not os.path.exists(archive_file):
-            data = {} 
-            # Initialize Data File
-            self.saveJSON(archive_file,{})
-
-        with open(archive_file) as json_file:
-            data = json.load(json_file)
-            self.archive_data = data
-
-        self.archive_data[pcase] = self.json_data[pcase]
-
-        del self.json_data[pcase]
-
-        self.saveJSON(pcase_file,self.json_data)
-
-        self.saveJSON(archive_file,self.archive_data)
-
-
-        self.loadPCases()
-        self.loadArchive()
-        previousFileName = "%s_%s.txt"%(self.getPCaseString(),self.getCustString())
-        previousTextArea = self.text_area.get("1.0",END)
-        index = self.pcase_list.selection()
-        values= self.pcase_list.item(index)['values']
-        self.__saveOnSelect__(previousFileName,previousTextArea)
-        
-
-        try:
-            topSelect = self.pcase_list.get_children()[0]
-            self.pcase_list.selection_set(topSelect)
-            self.updateInfo(self.pcase_list.item(topSelect)['values'],self.json_data)
-            self.updateInfoBox(self.pcase_list.item(topSelect)['values'],self.json_data)
-            self.__openOnSelect__()
-            #self.threadStart()
-        except:
-           pass
-       
-    def deleteCase(self):
-        confirmDialog = tk.messagebox.askquestion('Delete PCase?','Are you sure you want to remove this PCase?',icon='warning')
-        if confirmDialog == 'yes':
-            archive_file = self.getArchiveFile()
-            pcase = self.getPCaseString()
-            try:
-                del self.archive_data[pcase]
-            except KeyError:
-                archivedYet = tk.messagebox.showwarning('Is It Archived?','You are not able to delete a current case.')
-
-            
-            self.saveJSON(archive_file,self.archive_data)     
-            self.loadArchive()
-            previousFileName = "%s_%s.txt"%(self.getPCaseString(),self.getCustString())
-            previousTextArea = self.text_area.get("1.0",END)
-            index = self.pcase_list.selection()
-            values= self.pcase_list.item(index)['values']
-            self.__saveOnSelect__(previousFileName,previousTextArea)
-
-            try:
-                topSelect = self.pcase_list.get_children()[0]
-                self.pcase_list.selection_set(topSelect)
-                self.updateInfo(self.pcase_list.item(topSelect)['values'],self.json_data)
-                self.updateInfoBox(self.pcase_list.item(topSelect)['values'],self.json_data)
-                self.__openOnSelect__()
-                #self.threadStart()
-            except:
-                pass
-           
+   
     def treeview_sort_column(self,col, reverse,treeview):
         l = [(treeview.set(k, col), k) for k in treeview.get_children('')]
         l.sort(reverse=reverse)
@@ -924,8 +771,7 @@ class PCaser:
         self.copyPCaseAndCSRName()
     def copyCSRNameWrapper(self,parent):
         self.copyCSRName()
-    def unArchiveWrapper(self, parent):
-        self.unArchiveCase()
+
     
 
         
@@ -935,26 +781,15 @@ class PCaser:
     '''
     def onselect(self,parent):
         self.onselect = True
-        self.onarchive = False
+        index = self.pcase_list.selection()
+        values= self.pcase_list.item(index)['values']
+        pcase = values[0]
         if self.__firstStartUp == True:
-
-            index = self.pcase_list.selection()
-            values= self.pcase_list.item(index)['values']
-            pcase = values[0]
-
-
-            self.setPCaseString(pcase)
-            self.updateInfoBox(values,self.json_data)
-            self.updateInfo(values,self.json_data)
-            self.__openOnSelect__()
+            pk_process.runWithThreads(self.setPCaseString(pcase),self.updateInfoBox(values,self.json_data),self.updateInfo(values,self.json_data),self.__openOnSelect__())
             self.__firstStartUp = False
         else:
-
             previousFileName = "%s_%s.txt"%(self.getPCaseString(),self.getCustString())
             previousTextArea = self.text_area.get("1.0",END)
-            index = self.pcase_list.selection()
-            values= self.pcase_list.item(index)['values']
-            pcase = values[0]
 
             #set up for timeTracker feature
             today_date = timeTracker.get_today_date()
@@ -967,55 +802,10 @@ class PCaser:
             timeTracker.update_time(currently_selected,last_selected)
             d_time_tracking = timeTracker.load_times()
             timeTracker.calculate_times(d_time_tracking)
-
+            pk_process.runWithThreads(self.setPCaseString(pcase),self.updateInfoBox(values,self.json_data),self.updateInfo(values,self.json_data),self.__saveOnSelect__(previousFileName,previousTextArea), self.__openOnSelect__(),self.savePCase())
             
-            self.setPCaseString(pcase)
-            self.updateInfoBox(values,self.json_data)
-            self.updateInfo(values,self.json_data)
-            self.__saveOnSelect__(previousFileName,previousTextArea)
-            self.__openOnSelect__()
-            self.savePCase()
             
-
-    '''Called by the archive treeview when a new selection is made.
-    
-    Disables ftp root watchdog, calls updateInfo
-    '''      
-    def archiveSelect(self,parent):
-        self.onselect = False
-        self.onarchive = True
-        if self.__firstStartUp == True:
-
-            index = self.archive_list.selection()
-            values= self.archive_list.item(index)['values']
-            self.updateInfoBox(values,self.archive_data)
-            self.updateInfo(values,self.archive_data)
-            self.__openOnSelect__()
-            self.__firstStartUp = False
-        else:
-
-            previousFileName = "%s_%s.txt"%(self.getPCaseString(),self.getCustString())
-            previousTextArea = self.text_area.get("1.0",END)
-            index = self.archive_list.selection()
-            values= self.archive_list.item(index)['values']
-
-            # set up for timeTracker feature
-            today_date = timeTracker.get_today_date()
-            last_selected = "%s_%s"%(self.getPCaseString(),self.getCustString())
-            currently_selected = "%s_%s"%(values[0],values[1])
-            print("today_date: %s"%today_date)
-            print("last_selected: %s"%last_selected)
-            print("currently_selected: %s"%currently_selected)
-
-            timeTracker.update_time(currently_selected,last_selected)
-            d_time_tracking = timeTracker.load_times()
-            timeTracker.calculate_times(d_time_tracking)
-
-            self.updateInfoBox(values,self.archive_data)
-            self.updateInfo(values,self.archive_data)
-            self.__saveOnSelect__(previousFileName,previousTextArea)
-            self.__openOnSelect__()
-            self.savePCase()
+            
 
     '''Updates the PCase Info area, quick view, edit/push, and notes
     
@@ -1043,10 +833,10 @@ class PCaser:
 
         print("self.time_tracker_tree() ran in updateInfo function.-------------")
 
-        self.time_tracker_tree()
-        self.pcase_tree()
-        self.code_conflict_tree()
-        
+        # self.time_tracker_tree()
+        # self.pcase_tree()
+        # self.code_conflict_tree()
+        pk_process.runWithThreads(self.time_tracker_tree(),self.pcase_tree(),self.code_conflict_tree())
         
         
     def savePCase(self):
@@ -1068,47 +858,32 @@ class PCaser:
     '''Loads JSON file into memory if not already done, updates pcase_list treeview
     '''
     def loadPCases(self):
-        data_file = self.getDataFile()
+        try:
+            data_file = self.getDataFile()
 
-        if os.path.exists(data_file):
-            self.pcase_list.delete(*self.pcase_list.get_children())
-            if not self.json_data:
-                with open(data_file) as json_file:
-                    data = json.load(json_file)
-                    self.json_data = data
- 
+            if os.path.exists(data_file):
+                self.pcase_list.delete(*self.pcase_list.get_children())
+                if not self.json_data:
+                    with open(data_file) as json_file:
+                        data = json.load(json_file)
+                        self.json_data = data
+    
+                        for case in data:
+                            self.pcase_list.insert('','end',iid=[data[case]['pcase']],values=[data[case]['pcase'],data[case]['cust_name']])
+                else:
+                    data = self.json_data
                     for case in data:
                         self.pcase_list.insert('','end',iid=[data[case]['pcase']],values=[data[case]['pcase'],data[case]['cust_name']])
-            else:
-                data = self.json_data
-                for case in data:
-                    self.pcase_list.insert('','end',iid=[data[case]['pcase']],values=[data[case]['pcase'],data[case]['cust_name']])
+        except:
+            tk.messagebox.showwarning('Error', 'Issue loading pkaser.json file located in nt-json files.\nTypically this is caused bya faulty load.')
+            print("issues with json file.")
     
-    '''Loads Archive JSON file into memory if not already done, updates archive_list treeview
-    '''
-    def loadArchive(self):
-        data_file = self.getArchiveFile()
-
-        if os.path.exists(data_file):
-            self.archive_list.delete(*self.archive_list.get_children())
-            if not self.archive_data:
-                with open(data_file) as json_file:
-                    data = json.load(json_file)
-                    self.archive_data = data
-                    for case in data:
-                        self.archive_list.insert('','end',iid=[data[case]['pcase']],values=[data[case]['pcase'],data[case]['cust_name']])
-            else:
-                data = self.archive_data
-                for case in data:
-                    self.archive_list.insert('','end',iid=[data[case]['pcase']],values=[data[case]['pcase'],data[case]['cust_name']])
-
-
 
     def newWindow(self):
         save_dialog_window.saveDialogWindow(self,False)
 
     def editWindow(self):
-        save_dialog_window.saveDialogWindow(self,True)
+        change_pcase_details_window.saveDialogWindow(self,True)
 
     def run(self):
         appIcon_file = self.getAppIconFile()
@@ -1122,6 +897,37 @@ class PCaser:
     '''
     def pcase_tree(self):
         pcase = self.getPCaseString()
+        def copy_path():
+            item = self.tree.selection()[0]
+            parent_iid = self.tree.parent(item)
+            node = []
+            path = ""
+           # go backward until reaching root
+            while parent_iid != '':
+                node.insert(0, self.tree.item(parent_iid)['text'])
+                parent_iid = self.tree.parent(parent_iid)
+                i = self.tree.item(item, "text")
+                path = os.path.join(*node, i)
+                self.copyInput(path)
+                print(path)
+            return path
+        def copy_filename():
+            item = self.tree.selection()[0]
+            parent_iid = self.tree.parent(item)
+            node = []
+           # go backward until reaching root
+            while parent_iid != '':
+                node.insert(0, self.tree.item(parent_iid)['text'])
+                parent_iid = self.tree.parent(parent_iid)
+                i = self.tree.item(item, "text")
+                path = os.path.join(*node, i)
+                isFile = os.path.isfile(path)
+                print(isFile)
+                if isFile:
+                    filename = i
+                    self.copyInput(filename)
+                    print(filename)
+            
         if pcase:
             if self.first_init:
                 self.nodes = dict()
@@ -1151,6 +957,13 @@ class PCaser:
             self.tree.focus(self.tree.get_children()[0])
             self.tree.item(self.tree.focus(),open=True)
             self.open_node('')
+        
+        if self.__firstStartUp:
+            print("***PCase Folder Right Click Menu Run***")
+            self.right_click_menu_pcase_folder.add_command(label="Copy Path", command=lambda: copy_path())
+            self.right_click_menu_pcase_folder.add_command(label="Copy Filename", command=lambda: copy_filename())
+            self.right_click_menu_pcase_folder.add_command(label="Open Resource", command=lambda: self.openDir(str(copy_path())))
+        self.tree.bind("<Button-3>",  self.rightClickMenuPCaseFolder)
 
     '''Helper method for pcase_tree
     '''
@@ -1202,6 +1015,7 @@ class PCaser:
         pcase = self.getPCaseString()
         if pcase:
             subFolder_path = "Z:\\IT Documents\\QA\\" + pcase + subDir
+            print(subDir)
             files = self.filesInDir(subFolder_path,fileType)
             if len(files) == 0:
                 tk.messagebox.showwarning('Error','No files found in directory')
@@ -1224,6 +1038,7 @@ class PCaser:
         pcase = self.getPCaseString()
         if pcase:
             subFolder_path = "Z:\\IT Documents\\QA\\" + pcase + subDir
+            print(subFolder_path)
             if fileType == ".csv":
                 astFolder_path = "C:\\AST\\FDT\\"
             elif fileType == ".xml":
@@ -1234,7 +1049,7 @@ class PCaser:
                 astFolder_path = "\\AST\\ReleaseBin\\"
 
             files = self.filesInDir(subFolder_path,fileType)
-
+            print(files)
             if len(files) == 0:
                 tk.messagebox.showwarning('Error','No files found in directory')
             elif len(files) == 1:
@@ -1329,10 +1144,13 @@ class PCaser:
 
         def select():
             curItems = self.time_tracker_t.selection()
-            selected = []
-            print(curItems)
-            selected.append([str(self.time_tracker_t.item(i)['values'][2]) for i in curItems])
-            print(timeTracker.calculate_selected_times(selected[0]))
+            selected = "\n".join(["%s_%s"%(str(self.time_tracker_t.item(i)['values'][0]),str(self.time_tracker_t.item(i)['values'][1])) for i in curItems])            
+            selectedTimes = []
+            selectedTimes.append([str(self.time_tracker_t.item(i)['values'][2]) for i in curItems])
+            total_time = str(timeTracker.calculate_selected_times(selectedTimes[0]))
+            output = "%s\nTotalTime:%s"%(selected,total_time)
+            print(output)
+            self.copyInput(output)
 
 
         pcase = self.getPCaseString()
@@ -1506,11 +1324,18 @@ class PCaser:
 
 
 
-    def rightClickMenu(self, event):
+    def rightClickMenuNotePad(self, event):
         try:
-            self.right_click_menu.tk_popup(event.x_root, event.y_root)
+            self.right_click_menu_notepad.tk_popup(event.x_root, event.y_root)
         finally:
-            self.right_click_menu.grab_release()
+            self.right_click_menu_notepad.grab_release()
+
+    def rightClickMenuPCaseFolder(self, event):
+        try:
+            self.right_click_menu_pcase_folder.tk_popup(event.x_root, event.y_root)
+        finally:
+            self.right_click_menu_pcase_folder.grab_release()
+   
     
     def copyPCase(self):
         pyperclip.copy(self.getPCaseString())
@@ -1521,11 +1346,24 @@ class PCaser:
         pyperclip.copy(stamp)
     def copyCSRName(self):
         pyperclip.copy(self.getCustString())
+    
+    def copyInput(self, input):
+        pyperclip.copy(input)
+        
+
+    def pythonComment(self):
+        pyperclip.copy('''
+        # PCASE:%s - SFCASE: %s-  cdurham - %s
+        # Request:
+        # Action:
+        '''%(self.getPCaseString(), self.getCaseString(),str(datetime.datetime.now().date()))
+        )
 
 
             
     #Some Helpful mutator and accessor methods:
-    
+    def setServerList(self):
+        self.server_list = self.all_servers
     def setDataFolder(self,folder):
         self.data_folder = folder
     def getDataFolder(self):
@@ -1534,10 +1372,6 @@ class PCaser:
         self.data_file = file
     def getDataFile(self):
         return self.data_file
-    def setArchiveFile(self,file):
-        self.archive_file = file
-    def getArchiveFile(self):
-        return self.archive_file
 
     def setAppIconFile(self, file):
         self.appIcon_file = file  
@@ -1657,7 +1491,7 @@ class PCaser:
 
     def openWebsite(self,page):
         if page:
-            webbrowser.get('chrome').open(page)
+            webbrowser.get('windows-default').open(page)
         else:
             tk.messagebox.showwarning('Error', 'There is no SRD saved for this case.\nYou can add via Edit > Change PCase Details') 
         
@@ -1744,6 +1578,16 @@ class PKaseNotesFuctions(PCaser):
         self.text_area.insert(INSERT, self.timestamp)
         self.text_area.configure(state="normal")
 
+    def __checkSlackStamp__(self):
+        self.user = os.getlogin()
+        self.today = datetime.datetime.now().date()
+        self.now = datetime.datetime.now().time()
+        self.time = self.now.strftime("%I:%M:%S%p")
+        self.timestamp = "%s_%s_%s\nSlack Convo:\n-----------------------------------------------------------------------------------------------------------------------------------------------------------\n"%(self.user,self.today,self.time)
+        self.text_area.mark_set("insert",1.0)
+        self.text_area.insert(INSERT, self.timestamp)
+        self.text_area.configure(state="normal")
+
     def __CaseCommittedNoteStamp__(self):
         self.user = os.getlogin()
         self.today = datetime.datetime.now().date()
@@ -1753,7 +1597,7 @@ class PKaseNotesFuctions(PCaser):
         self.text_area.mark_set("insert",1.0)
         self.text_area.insert(INSERT, self.timestamp)
         self.text_area.configure(state="normal")
-        statusToCheckedIn(self.returnParentId())
+        sfCase.statusToCheckedIn(self.returnParentId())
 
     def __sentToEIPP__(self):
         self.user = os.getlogin()
@@ -1764,7 +1608,7 @@ class PKaseNotesFuctions(PCaser):
         self.text_area.mark_set("insert",1.0)
         self.text_area.insert(INSERT, self.timestamp)
         self.text_area.configure(state="normal")
-        statusToEIPP(self.returnParentId())
+        sfCase.statusToEIPP(self.returnParentId())
 
     def __sentToFCI__(self):
         self.user = os.getlogin()
@@ -1775,7 +1619,7 @@ class PKaseNotesFuctions(PCaser):
         self.text_area.mark_set("insert",1.0)
         self.text_area.insert(INSERT, self.timestamp)
         self.text_area.configure(state="normal")
-        statusToFCI(self.returnParentId())
+        sfCase.statusToFCI(self.returnParentId())
 
     def __callReviewCompleted__(self):
         self.user = os.getlogin()
@@ -1786,8 +1630,20 @@ class PKaseNotesFuctions(PCaser):
         self.text_area.mark_set("insert",1.0)
         self.text_area.insert(INSERT, self.timestamp)
         self.text_area.configure(state="normal")
-        commentCallReviewCompleted(self.returnParentId())
+        sfCase.commentCallReviewCompleted(self.returnParentId())
 
+    def __PendingASECodeReview__(self):
+        self.user = os.getlogin()
+        self.today = datetime.datetime.now().date()
+        self.now = datetime.datetime.now().time()
+        self.time = self.now.strftime("%I:%M:%S%p")
+        self.timestamp = "%s_%s_%s\nBT Engineer Peer Review Completed.Case Pending ASE Code Review.\n-----------------------------------------------------------------------------------------------------------------------------------------------------------\n"%(self.user,self.today,self.time)
+        self.text_area.mark_set("insert",1.0)
+        self.text_area.insert(INSERT, self.timestamp)
+        self.text_area.configure(state="normal")
+        print(self.returnParentId())
+        sfCase.statusToASECodeReview(self.returnParentId())
+        
     def __newFile__(self):
         #self.root.title("Untitled - Notepad")
         self.fileCheck = self.text_area.get("1.0",END)
@@ -1829,6 +1685,7 @@ class PKaseNotesFuctions(PCaser):
                 file.write(self.text_area.get(1.0,END))
     
     def __saveOnSelect__(self,prevFileName,prevTextArea):
+        print("__saveOnSelect__ Ran")
         prevFileName = prevFileName
         prevTextArea = prevTextArea
         self.text_area.configure(state="normal")

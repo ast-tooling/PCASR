@@ -1,16 +1,21 @@
 import tkinter as tk
 from tkinter import ttk
-from unittest import case
+from tkinter import messagebox
+from tkinter.messagebox import askyesno
 import validators
 import os
 import json
 from simple_salesforce import Salesforce
 import configparser
 import keyring
+import ctypes
 
 
 import pk_popouts.create_tool_tip as create_tool_tip
-import pk_salesforce.salesForceRequest as salesForceRequest
+import pk_features.pk_options as pk_options
+from pk_wrappers.buttonsWrapper import TkinterCustomButton
+from pk_salesforce.salesforceUpdateCommands import updateEngineer
+from pk_salesforce.salesForceRequest import getSfUserId
 
 '''Main Class for 'save' window
 Handles requesting user input for pcase information to save for new and 
@@ -32,7 +37,7 @@ class saveDialogWindow:
 
         # Initialize tk instance and frame
         self.save_window = tk.Tk()
-        self.save_window.title("New Case")
+        self.save_window.title("New Entry")
         self.save_frame = tk.Frame(self.save_window,borderwidth=1)
 
         # Control Location of Appearence
@@ -48,19 +53,20 @@ class saveDialogWindow:
         self.save_frame.pack()
 
         # Initialize Labels
-        self.cn_label = tk.Label(self.save_frame,text="Case Number")
-
+        self.srd_link = tk.Label(self.save_frame,text="SRD Link")
+        self.sf_link = tk.Label(self.save_frame,text="SF Link")
 
         # Initialize Entries
-        self.cn_entry = ttk.Entry(self.save_frame,validate="focusout",validatecommand=self.validateSRD,width=50,style="EntryStyle.TEntry")
-
+        self.srd_entry = ttk.Entry(self.save_frame,validate="focusout",validatecommand=self.validateSRD,width=50,style="EntryStyle.TEntry")
+        self.sf_entry = ttk.Entry(self.save_frame,validate="focusout",validatecommand=self.validateSF,width=50,style="EntryStyle.TEntry")
 
         # ✔ ❌ ❓
         # Initialize Verify Labels, Label Messages, and Tooltips
-        self.cn_valid = ttk.Label(self.save_frame,text="❓",width=3,foreground="#fcba03")
+        self.srd_valid = ttk.Label(self.save_frame,text="❓",width=3,foreground="#fcba03")
+        self.sf_valid = ttk.Label(self.save_frame,text="❓",width=3,foreground="#fcba03")
 
-        # self.srd_tt = create_tool_tip.CreateToolTip(self.srd_valid,"SRD will be validated when text is entered and the mouse leaves this box.")
-        # self.sf_tt = create_tool_tip.CreateToolTip(self.srd_valid,"SalesForce link will be validated when text is entered and the mouse leaves this box.")
+        self.srd_tt = create_tool_tip.CreateToolTip(self.srd_valid,"SRD will be validated when text is entered and the mouse leaves this box.")
+        self.sf_tt = create_tool_tip.CreateToolTip(self.srd_valid,"SalesForce link will be validated when text is entered and the mouse leaves this box.")
 
 
         # Initialize Command Buttons
@@ -75,9 +81,18 @@ class saveDialogWindow:
         self.validate_button.pack(side="left",padx=5)
 
         # Configure Grid Layout
-        self.cn_label.grid(row=2,column=0)
-        self.cn_entry.grid(row=2,column=1)
-        self.cn_valid.grid(row=2,column=2,padx=2,pady=2)
+        self.sf_link.grid(row=2,column=0)
+
+        self.sf_entry.grid(row=2,column=1)
+
+        self.sf_valid.grid(row=2,column=2,padx=2,pady=2)
+
+        self.srd_link.grid(row=3,column=0)
+
+        self.srd_entry.grid(row=3,column=1)
+
+        self.srd_valid.grid(row=3,column=2,padx=2,pady=2)
+
 
         # Initialize Data File Location
         user = os.getlogin()
@@ -94,15 +109,35 @@ class saveDialogWindow:
             if pcase in data:
                 self.srd_entry.insert(tk.END,data[pcase]['srd_link'])
                 self.sf_entry.insert(tk.END,data[pcase]['sf_link'])
+
+                self.validateSRD()
                 self.validateSF()
                 # Used to view srd link.
                 print("self.retValidSFLink(): %s"%self.retValidSFLink())
     
+    def takeOwnership(self, sf_link=""):
+        # Set User Type
+        opts = pk_options.loadOptFile()
+        job_title = opts["JOB_TITLE"]
 
+        sf_link = sf_link
+        answer = askyesno(title="Please Confirm!",
+                        message="Will you be taking ownership of this case?")
+        if answer:
+            def get_display_name(): # https://stackoverflow.com/questions/21766954/how-to-get-windows-users-full-name-in-python
+                GetUserNameEx = ctypes.windll.secur32.GetUserNameExW
+                NameDisplay = 3
+                size = ctypes.pointer(ctypes.c_ulong(0))
+                GetUserNameEx(NameDisplay, None, size)
+                nameBuffer = ctypes.create_unicode_buffer(size.contents.value)
+                GetUserNameEx(NameDisplay, nameBuffer, size)
+                return nameBuffer.value
+            fullName = get_display_name()
+            print(fullName)
+            updateEngineer(sf_link,getSfUserId(),job_title)
        
     def savePCase(self):
-        srd_link = ""
-        case_number = ""
+
         if not os.path.exists(self.data_file):
             if not os.path.isdir(self.data_folder):
                 os.mkdir(self.data_folder)
@@ -112,17 +147,17 @@ class saveDialogWindow:
             with open(self.data_file,'w') as outfile:
                 json.dump(data,outfile)
 
-        case_number = salesForceRequest.getSfCaseInfo(self.cn_entry.get().strip())
-        if case_number:
-            sf_link = case_number[0] # salesforce link
-            srd_link = case_number[1] # srd link
+        sf_link = self.sf_entry.get().strip()
+        srd_link = ""
+        if(self.validateSRD()):
+            srd_link = self.srd_entry.get()
 
         case_info = self.getSFInfo(sf_link)
 
         if case_info:
             case_info['srd_link'] = srd_link
             case_info['sf_link'] = sf_link
-            #case_info['notes'] = ''
+            case_info['notes'] = ''
             pcase = case_info['pcase']
 
             json_file = open(self.data_file)
@@ -140,6 +175,7 @@ class saveDialogWindow:
 
             self.the_parent.json_data = data
             self.kill_window()
+            self.takeOwnership(sf_link)
             self.the_parent.loadPCases()
             self.the_parent.pcase_list.selection_set(pcase)
             
@@ -181,52 +217,52 @@ class saveDialogWindow:
             return case_dict
 
     def validateSF(self):
-        entry = self.cn_entry.get()
-        case_number = salesForceRequest.getSfCaseInfo(entry)
-        print(case_number)
-        if case_number:
-            if validators.url(case_number[0]):
-                self.cn_valid.config(text="✔",foreground="#198000")
-                self.stateHandler()
-                return True
+        url = self.sf_entry.get()
+        if "https://" not in url:
+            url = "https://" + url 
+        if validators.url(url):
+            self.sf_valid.config(text="✔",foreground="#198000")
+            self.sf_tt.setText("SF Link is a valid website")
+            self.stateHandler()
+            return True
         else:
-            self.cn_valid.config(text="❌",foreground="#b00505") 
+            self.sf_valid.config(text="❌",foreground="#b00505") 
+            self.sf_tt.setText("SF Link is not a valid website")
             self.stateHandler()
             return False
-
     
     def retValidSFLink(self):
-        entry = self.cn_entry.get()
-        case_number = salesForceRequest.getSfCaseInfo(entry)
-        if case_number:
-            self.cn_valid.config(text="✔",foreground="#198000")
+        url = self.sf_entry.get()
+        if "https://" not in url:
+            url = "https://" + url 
+        if validators.url(url):
+            self.sf_valid.config(text="✔",foreground="#198000")
+            self.sf_tt.setText("SF Link is a valid website")
             self.stateHandler()
-            return case_number[0]
+            return url
         else:
-            self.cn_valid.config(text="❌",foreground="#b00505")
+            self.sf_valid.config(text="❌",foreground="#b00505") 
+            self.sf_tt.setText("SF Link is not a valid website")
             self.stateHandler()
             return False
   
 
     def validateSRD(self):
-        print("validateSRD")
-        entry = self.cn_entry.get()
-        case_number = salesForceRequest.getSfCaseInfo(entry)
-        print(case_number)
-        if case_number[1]:
-            print("validateSRD - if case_number")
-            if validators.url(case_number[1]):
-                self.cn_valid.config(text="✔",foreground="#198000")
-                self.stateHandler()
-                return True
-        else:
-            self.cn_valid.config(text="✔",foreground="#198000") 
-            self.stateHandler()
+        url = self.srd_entry.get()
+        if "https://" not in url:
+            url = "https://" + url 
+        if validators.url(url):
+            self.srd_valid.config(text="✔",foreground="#198000")
+            self.srd_tt.setText("SRD is a valid website")
             return True
+        else:
+            self.srd_valid.config(text="❌",foreground="#b00505") 
+            self.srd_tt.setText("SRD is not a valid website")
+            return False
 
     # ✔ ❌ ❓
     def stateHandler(self):
-        if self.cn_valid.cget('text') == "✔":
+        if self.sf_valid.cget('text') == "✔":
             self.save_button.config(state=tk.ACTIVE)
         else:
             self.save_button.config(state=tk.DISABLED)

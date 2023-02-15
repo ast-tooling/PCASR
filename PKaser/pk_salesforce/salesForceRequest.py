@@ -1,4 +1,5 @@
 from logging import error
+from unittest import case
 from webbrowser import Error
 from simple_salesforce import Salesforce, SalesforceLogin
 import json
@@ -7,6 +8,8 @@ import configparser
 import keyring
 from tkinter import messagebox
 import requests
+import re
+from collections import OrderedDict
 
 def get_SalesForceReport():
     # code conflict report
@@ -93,7 +96,7 @@ def load_OpenCases():
         messagebox.showerror(message='Error: load_OpenCases(): "{}"'.format(e))
 
 
-def getQueueId(queue=""):
+def getCasesFromQueue(queue=""):
     user = os.getlogin()
     data_folder = r"C:\\Users\\%s\\AppData\\Roaming\\PKaser" %user
     data_file = data_folder+"\\config.txt"
@@ -110,10 +113,23 @@ def getQueueId(queue=""):
         session=session,
     )
    
-    result = sf.query("SELECT Id FROM QueueSobject WHERE Queue.Name = '%s'"%(queue))
-    for i in result['records']:
-        user_sf_id = i['Id']
-    return user_sf_id
+    qGroup = sf.query("SELECT OwnerId FROM Group WHERE Name = '%s'"%(queue))
+    groupOD = qGroup['records'][0]
+    OwnerId = groupOD['OwnerId']
+    qCases = sf.query("SELECT CaseNumber, Subject FROM Case WHERE OwnerId = '%s'"%(OwnerId))
+    casesOD = qCases['records']
+    # for i, (key, value) in enumerate(casesOD.items()):
+    #     print(key, value)
+ 
+
+
+
+# print(getCasesFromQueue('EIPP'))
+
+
+
+
+
 
 def getSfUserId():
     user = os.getlogin()
@@ -131,7 +147,7 @@ def getSfUserId():
         organizationId=organizationId,
         session=session,
     )
-    sf_username = "%s@billtrust.com"%(user).lower()
+    sf_username = username
     result = sf.query("SELECT Id FROM User WHERE Username = '%s'"%(sf_username))
     for i in result['records']:
         user_sf_id = i['Id']
@@ -166,3 +182,47 @@ def get_openCasesByOwner():
         messagebox.showerror(message='Error: get_openCasesByOwner(): "{}"'.format(e))
     except Exception as e:
         messagebox.showerror(message='Error: get_openCasesByOwner(): "{}"'.format(e))
+
+
+def getSfCaseInfo(case_number=""):
+    def IsInt(number):
+        try:
+            int(number)
+            return True
+        except:
+            return False
+
+    user = os.getlogin()
+    data_folder = r"C:\\Users\\%s\\AppData\\Roaming\\PKaser" %user
+    data_file = data_folder+"\\config.txt"
+    config = configparser.ConfigParser()
+    config.read(data_file)
+    username = config.get('credentials','username')
+    organizationId = config.get('credentials','organizationId')
+    regex = r"(?:http|https):\/\/docs.google.com\/spreadsheets(?:[\w.,@?^=%&amp;:\/~+#-]*[\w@?^=%&amp;\/~+#-]+)" # Not exact but works.
+    case_number = case_number.strip()
+    session = requests.Session()
+    sf = Salesforce(
+        username= username,
+        password=keyring.get_password("pkaser-userinfo", username),
+        security_token=keyring.get_password("pkaser-token", username),
+        organizationId=organizationId,
+        session=session,
+    )
+    if IsInt(case_number):
+        result = sf.query("SELECT description FROM Case WHERE casenumber = '%s'"%(case_number))
+        intTotalSize = result['totalSize']
+        if intTotalSize:
+            od = result['records'][0]
+            case_id = od['attributes']['url'].split('/')[-1]
+            sf_link = 'https://billtrust.my.salesforce.com/' + case_id
+            try:
+                srd_link = re.search(regex,od['Description']).group()
+            except AttributeError: # NO SRD LINK FOUND IN DESCRIPTION.
+                srd_link = 0
+            return sf_link, srd_link
+        else:
+            return False # intTotalSize is 0
+    else:
+        return False
+

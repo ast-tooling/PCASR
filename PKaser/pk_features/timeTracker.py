@@ -75,7 +75,7 @@ def update_time(currently_selected, last_selected):
         times.update(new_day)
         d_time_tracking = times[today_date]
 
-    #print("BEFORE: %s"%d_time_tracking)
+    print("BEFORE: %s"%d_time_tracking)
     if keys_exists(d_time_tracking,last_selected):
         print("if keys_exists(d_time_tracking,last_selected): - ran - timetracker.py")
         for time_lists in d_time_tracking[last_selected]:
@@ -100,7 +100,7 @@ def update_time(currently_selected, last_selected):
     with open(tracker_file, 'w') as fp:
         json.dump(times, fp)
 
-    #print("AFTER: %s"%d_time_tracking) 
+    print("AFTER: %s"%d_time_tracking) 
 
 
 def calculate_times(d_time_tracking):
